@@ -122,4 +122,11 @@ func TestCrossHarnessAgentBusRouteCommitment(t *testing.T) {
 	badCap := famRoute
 	badCap.CapabilityDigestHex = "not-64-hex"
 	uassert.Error(t, badCap.Validate())
+
+	// Gnosh gnomem/v2 peer-plan relay kinds (peer_claim, peer_handoff, peer_done, peer_halt) validate on-chain.
+	for _, k := range []string{AgentKindPeerClaim, AgentKindPeerHandoff, AgentKindPeerDone, AgentKindPeerHalt} {
+		peerRoute := route
+		peerRoute.Kind = k
+		uassert.NoError(t, peerRoute.Validate())
+	}
 }

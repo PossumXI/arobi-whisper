@@ -20,6 +20,10 @@ const (
 	AgentKindHaltSignal      = "halt_signal"
 	AgentKindCapabilityLease = "capability_lease"
 	AgentKindMemorySync      = "memory_sync"
+	AgentKindPeerClaim       = "peer_claim"
+	AgentKindPeerHandoff     = "peer_handoff"
+	AgentKindPeerDone        = "peer_done"
+	AgentKindPeerHalt        = "peer_halt"
 )
 
 // AgentBusRoute describes the authenticated routing metadata for an encrypted cross-shell,
@@ -51,7 +55,8 @@ func (r AgentBusRoute) Validate() error {
 	switch r.Kind {
 	case AgentKindTaskDispatch, AgentKindWarrantDelegate, AgentKindEvidenceReceipt,
 		AgentKindStatusReply, AgentKindHandoff, AgentKindHaltSignal,
-		AgentKindCapabilityLease, AgentKindMemorySync:
+		AgentKindCapabilityLease, AgentKindMemorySync,
+		AgentKindPeerClaim, AgentKindPeerHandoff, AgentKindPeerDone, AgentKindPeerHalt:
 	default:
 		return errors.New("unsupported agent bus message kind: " + r.Kind)
 	}
