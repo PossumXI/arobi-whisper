@@ -18,22 +18,26 @@ const (
 	AgentKindStatusReply     = "status_reply"
 	AgentKindHandoff         = "handoff"
 	AgentKindHaltSignal      = "halt_signal"
+	AgentKindCapabilityLease = "capability_lease"
+	AgentKindMemorySync      = "memory_sync"
 )
 
 // AgentBusRoute describes the authenticated routing metadata for an encrypted cross-shell,
-// cross-environment, or cross-harness agent packet carried inside a Whisper SealedEnvelope.
+// cross-environment, or cross-harness agent/Familiar packet carried inside a Whisper SealedEnvelope.
 // Plaintext prompts, code, and secrets stay encrypted inside SealedEnvelope.CiphertextB64.
 type AgentBusRoute struct {
-	FromHarness         string // e.g. "ullumii", "gnosh.ai", "shell", "mcp", "gno-realm"
-	FromEnv             string // e.g. "linux-docker", "windows-pwsh", "wsl", "cloud-worker"
-	FromAgentID         string
-	ToHarness           string
-	ToEnv               string
-	ToAgentID           string
-	Kind                string // AgentKind*
-	CorrelationID       string
-	ParentWarrantDigest string // optional 64-hex digest linking to gno.land/p/arobi/assurance
-	EvidenceRootHex     string // optional 64-hex RFC 6962 accumulator root
+	FromHarness           string // e.g. "ullumii", "gnosh.ai", "shell", "mcp", "gno-realm", "local-llm"
+	FromEnv               string // e.g. "linux-docker", "windows-pwsh", "wsl", "cloud-worker"
+	FromAgentID           string
+	ToHarness             string
+	ToEnv                 string
+	ToAgentID             string
+	Kind                  string // AgentKind*
+	CorrelationID         string
+	ParentWarrantDigest   string // optional 64-hex digest linking to gno.land/p/arobi/assurance
+	EvidenceRootHex       string // optional 64-hex RFC 6962 accumulator root
+	CapabilityDigestHex   string // optional 64-hex Familiar CapabilityToken digest
+	MemoryRecallDigestHex string // optional 64-hex MemoryRecallProof digest
 }
 
 // Validate checks routing metadata fields before hashing or sealing.
@@ -46,7 +50,8 @@ func (r AgentBusRoute) Validate() error {
 	}
 	switch r.Kind {
 	case AgentKindTaskDispatch, AgentKindWarrantDelegate, AgentKindEvidenceReceipt,
-		AgentKindStatusReply, AgentKindHandoff, AgentKindHaltSignal:
+		AgentKindStatusReply, AgentKindHandoff, AgentKindHaltSignal,
+		AgentKindCapabilityLease, AgentKindMemorySync:
 	default:
 		return errors.New("unsupported agent bus message kind: " + r.Kind)
 	}
@@ -63,12 +68,22 @@ func (r AgentBusRoute) Validate() error {
 			return errors.New("evidenceRootHex: " + err.Error())
 		}
 	}
+	if r.CapabilityDigestHex != "" {
+		if _, err := assurance.ParseDigest(r.CapabilityDigestHex); err != nil {
+			return errors.New("capabilityDigestHex: " + err.Error())
+		}
+	}
+	if r.MemoryRecallDigestHex != "" {
+		if _, err := assurance.ParseDigest(r.MemoryRecallDigestHex); err != nil {
+			return errors.New("memoryRecallDigestHex: " + err.Error())
+		}
+	}
 	return nil
 }
 
 // Encode serializes AgentBusRoute into canonical length-prefixed big-endian bytes.
 func (r AgentBusRoute) Encode() []byte {
-	out := make([]byte, 0, 224)
+	out := make([]byte, 0, 256)
 	out = appendStr(out, DomainAgentBus)
 	out = append(out, EncodingVersion)
 	out = appendStr(out, r.FromHarness)
@@ -81,6 +96,8 @@ func (r AgentBusRoute) Encode() []byte {
 	out = appendStr(out, r.CorrelationID)
 	out = appendStr(out, r.ParentWarrantDigest)
 	out = appendStr(out, r.EvidenceRootHex)
+	out = appendStr(out, r.CapabilityDigestHex)
+	out = appendStr(out, r.MemoryRecallDigestHex)
 	return out
 }
 

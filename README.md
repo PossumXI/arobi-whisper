@@ -67,6 +67,19 @@ Tests run against real Gno v1.8.0 (`gno test -v`) and Node.js covering:
 
 ---
 
+## Live Gno.land Onyx Testnet (`onyx-1`) Submission Proof
+
+Submitted on-chain to `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`; currently parked in Onyx's `code_submission_policy = "inert"` approver activation queue — verifiable via `gnokey query vm/qinertpaths`):
+
+| Package / Realm Path | Block Height | Transaction Hash |
+| --- | ---: | --- |
+| `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343650` | `Y8yxq2g2dcj2q3PUrJDzHEk6TeyEq2mEDfXvn6yW0ow=` |
+| `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343652` | `/EB7ITw57NRhnrB9rIS5gi6hp73k9yRcHKwH6LWwOcc=` |
+
+*(Also supports cross-harness Familiar `capability_lease` & `memory_sync` envelopes carrying `CapabilityDigestHex` and `MemoryRecallDigestHex` in `gno.land/p/arobi/whisper/agentbus.gno`.)*
+
+---
+
 ## Deploying to Gno.land Onyx Testnet (`onyx-1`)
 
 ```bash

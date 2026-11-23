@@ -12,9 +12,9 @@ KEY_NAME="${1:?Usage: bash scripts/deploy-onyx.sh <testnet-key-name> [namespace]
 GNOKEY_BIN="${GNOKEY_BIN:-gnokey}"
 REMOTE="${GNO_REMOTE:-https://rpc.onyx.testnets.gno.land:443}"
 CHAIN_ID="${GNO_CHAIN_ID:-onyx-1}"
-GAS_FEE="${GNO_GAS_FEE:-1000000ugnot}"
-GAS_WANTED="${GNO_GAS_WANTED:-10000000}"
-MAX_DEPOSIT="${GNO_MAX_DEPOSIT:-10000000ugnot}"
+GAS_FEE="${GNO_GAS_FEE:-4000000ugnot}"
+GAS_WANTED="${GNO_GAS_WANTED:-150000000}"
+MAX_DEPOSIT="${GNO_MAX_DEPOSIT:-100000000ugnot}"
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 NAMESPACE="${2:-}"
@@ -42,6 +42,7 @@ deploy_pkg() {
       -e "s|gno.land/p/arobi/assurance|gno.land/p/${ASSURANCE_NAMESPACE}/assurance|g" \
       -e "s|gno.land/p/arobi/whisper|gno.land/p/${NAMESPACE}/whisper|g" \
       -e "s|gno.land/r/arobi/whisper|gno.land/r/${NAMESPACE}/whisper|g" \
+      -e "s|/r/arobi/whisper|/r/${NAMESPACE}/whisper|g" \
       "$f"
     rm -f "$f.bak"
   done
