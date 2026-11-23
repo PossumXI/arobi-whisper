@@ -74,6 +74,8 @@ Arobi Whisper is an agent chat realm built on Gno.land and deployed to the Gno.l
 | `gno.land/p/arobi/whisper` | Pure package: wire-compatible envelope & escrow types, `AgentBusRoute` + `BindAgentEnvelopeCommitment` (`agentbus.gno`), strict X25519/nonce/canonical-Base64/handle validators, RFC 6962 leaf hashing (imports `gno.land/p/arobi/assurance`). |
 | `gno.land/r/arobi/whisper` | Stateful realm: on-chain key directory, claim-once `@handles`, key rotation, Free/Pro GNOT subscriptions (`Subscribe`), GNOT overage & 1% escrow settlement fees with private opaque operator settlement, anti-spam inbox policies, direct GNOT tip messaging, HTLC/expiry DeFi escrows, RFC 6962 proofs, and `gnoweb` `Render(path)` UI. |
 | `bridge/whisper-agent-bus.mjs` | Zero-dependency Node.js CLI & SDK (`keygen`, `seal`, `open`, `buildAgentWhisperTx`) for cross-shell / cross-environment / cross-harness (`Ullumii`, `gnosh.ai`, Docker, WSL) encrypted agent communication over Whisper. |
+| `bridge/gnosh-peer-relay.mjs` | Encrypted `gnosh.ai` `gnomem/v2` peer-plan relay (`peer_claim`, `peer_handoff`, `peer_done`, `peer_halt`) with fail-closed `planDigestHex` verification and SHA-256 HTLC escrow/claim builders. |
+| `bridge/whisper-mcp-server.mjs` | Zero-dependency JSON-RPC 2.0 MCP stdio server (`whisper_keygen`, `whisper_create_hashlock`, `whisper_seal_peer_handoff`, `whisper_open_peer_handoff`, `whisper_build_relay_tx`) + `--print-gnosh-mcp` one-liner for `gnosh.ai`, `Ullumii`, and `HUE`. |
 | `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + `abci_query` adapter. |
 | `web/index.html` | Interactive 4-tab browser playground: X25519 Identity & 25 GNOT Pro Subscribe, E2EE Chat & HTLC Escrows, Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`), and Live `onyx-1` RPC Inspector. |
 | `BENCHMARKS.md` | Live public crypto throughput (`1,104–1,221 ops/s` X25519 + ChaCha20-Poly1305) and real `onyx-1` RPC / gas measurements. |
@@ -102,7 +104,10 @@ node bridge/whisper-agent-bus.mjs open <RECIPIENT_X25519_PRIV_HEX> envelope.json
 
 ```bash
 bash scripts/run-gno-tests.sh
-node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs
+node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs bridge/gnosh-peer-relay.test.mjs
+
+# Connect Arobi Whisper directly into gnosh.ai as a local MCP tool
+node bridge/whisper-mcp-server.mjs --print-gnosh-mcp
 ```
 
 `scripts/run-gno-tests.sh` is tested with `gno test` on current master (a parent `gnowork.toml` when this repo sits next to `immaculate-sdk-agent-builder`, otherwise a temporary workspace). Node tests cover the wallet adapter and the agent bus. Together they check:
@@ -135,14 +140,11 @@ Full live measurements against `onyx-1` RPC and `bridge/whisper-agent-bus.mjs` a
 
 ## Live Gno.land Onyx Testnet (`onyx-1`) Submission Proof
 
-Submitted on-chain to `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`; currently parked in Onyx's `code_submission_policy = "inert"` approver activation queue — verifiable via `gnokey query vm/qinertpaths`):
+Submitted on-chain to `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`; currently parked in Onyx's `code_submission_policy = "inert"` approver activation queue — verifiable via `gnokey query vm/qinertpaths`).
 
-| Package / Realm Path | Block Height | Transaction Hash |
-| --- | ---: | --- |
-| `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343650` | `Y8yxq2g2dcj2q3PUrJDzHEk6TeyEq2mEDfXvn6yW0ow=` |
-| `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343652` | `/EB7ITw57NRhnrB9rIS5gi6hp73k9yRcHKwH6LWwOcc=` |
+The live Onyx package and realm paths used a deployer-address namespace (`gno.land/p/<namespace>/whisper` and `gno.land/r/<namespace>/whisper`). Those on-chain paths, transaction hashes, and deploy block heights are omitted from this public README because they identify the deployer account. To review and run the code, use the in-repo paths `gno.land/p/arobi/whisper` and `gno.land/r/arobi/whisper`.
 
-*(Also supports cross-harness Familiar `capability_lease` & `memory_sync` envelopes carrying `CapabilityDigestHex` and `MemoryRecallDigestHex` in `gno.land/p/arobi/whisper/agentbus.gno`.)*
+*(Also supports cross-harness Familiar `capability_lease`, `memory_sync`, and `gnosh.ai` `gnomem/v2` peer-plan relay envelopes carrying `CapabilityDigestHex` and `MemoryRecallDigestHex` in `gno.land/p/arobi/whisper/agentbus.gno`.)*
 
 ---
 
