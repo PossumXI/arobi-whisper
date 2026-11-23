@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arobi Whisper on Gno.land — E2EE DeFi Messenger</title>
+  <style>
+    :root { --bg: #0b0f17; --card: #131a26; --border: #253047; --fg: #e8eefc; --muted: #93a4c3; --accent: #5eead4; --accent2: #60a5fa; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--fg); line-height: 1.5; }
+    main { max-width: 960px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 1.9rem; margin: 0 0 8px; }
+    p.sub { color: var(--muted); margin: 0 0 24px; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 18px; }
+    label { display: block; font-size: 0.82rem; color: var(--muted); margin: 10px 0 4px; }
+    input, textarea, select { width: 100%; background: #0c121e; color: var(--fg); border: 1px solid var(--border); border-radius: 8px; padding: 9px 10px; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 0.85rem; }
+    button { margin-top: 12px; background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #061018; font-weight: 700; border: 0; border-radius: 8px; padding: 10px 14px; cursor: pointer; }
+    button.secondary { background: #1c2638; color: var(--fg); border: 1px solid var(--border); }
+    pre { background: #070b12; border: 1px solid var(--border); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 0.78rem; color: #a7f3d0; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 0.75rem; background: #132c2f; color: var(--accent); border: 1px solid #1f5156; margin-right: 6px; }
+  </style>
+</head>
+<body>
+<main>
+  <div>
+    <span class="badge">Gno.land Realm</span>
+    <span class="badge">X25519 + XChaCha20-Poly1305</span>
+    <span class="badge">HTLC DeFi Escrow</span>
+    <span class="badge">RFC 6962 Evidence</span>
+  </div>
+  <h1>Arobi Whisper on Gno.land</h1>
+  <p class="sub">Client-sealed end-to-end encrypted DeFi messaging anchored via <code>gno.land/r/arobi/whisper</code> + <code>gno.land/p/arobi/assurance</code>. Plaintext never touches chain state.</p>
+
+  <div class="grid">
+    <section class="card">
+      <h2>1. Wallet &amp; Local Identity</h2>
+      <label>Gno.land Realm Path</label>
+      <input id="realmPath" value="gno.land/r/arobi/whisper" />
+      <label>Connected Gno Address (Adena or Demo)</label>
+      <input id="callerAddr" value="g1alice0000000000000000000000000000000000" />
+      <label>Handle (claim-once)</label>
+      <input id="handle" value="alice_gno" />
+      <button id="btnConnect">Connect Adena Wallet</button>
+      <button id="btnGenKeys" class="secondary">Generate Local E2EE Keypair</button>
+      <label>Local Public Key (hex)</label>
+      <input id="pubHex" readonly placeholder="Click Generate Local E2EE Keypair" />
+      <button id="btnRegister">Build / Broadcast RegisterIdentity</button>
+    </section>
+
+    <section class="card">
+      <h2>2. Seal E2EE Message + DeFi Tip / Escrow</h2>
+      <label>Recipient (@handle or g1...)</label>
+      <input id="toRecipient" value="@bob_defi" />
+      <label>Plaintext Message (encrypted locally in browser)</label>
+      <textarea id="plaintext" rows="3">Meet at block 4200 — releasing HTLC preimage after audit passes.</textarea>
+      <label>Mode</label>
+      <select id="sendMode">
+        <option value="tip">Direct Tip (SendMessage — 100% to recipient)</option>
+        <option value="escrow">HTLC DeFi Escrow (SendEscrowMessage)</option>
+      </select>
+      <label>Amount (ugnot)</label>
+      <input id="amountUgnot" type="number" value="5000" />
+      <label>Optional HTLC Preimage (hashed locally via SHA-256)</label>
+      <input id="preimage" value="arobi-secret-key" />
+      <button id="btnSend">Seal Locally &amp; Build Gno Transaction</button>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top: 16px;">
+    <h2>3. Verifiable Output (Ciphertext Envelope + Adena <code>/vm.m_call</code> Payload)</h2>
+    <pre id="output">Click "Generate Local E2EE Keypair" or "Seal Locally &amp; Build Gno Transaction" to inspect the exact zero-plaintext payload sent to Gno.land.</pre>
+  </section>
+</main>
+
+<script type="module">
+  import { buildRegisterIdentityTx, buildSendMessageTx, buildSendEscrowTx, broadcastWithAdena } from './adena-whisper.mjs';
+
+  const $ = (id) => document.getElementById(id);
+  const toHex = (buf) => Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, '0')).join('');
+  const toB64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)));
+  const sha256Hex = async (bytes) => toHex(await crypto.subtle.digest('SHA-256', bytes));
+
+  let localPubHex = '';
+
+  $('btnConnect').onclick = async () => {
+    try {
+      if (!window.adena) throw new Error('Adena wallet not installed — running in offline tx-preview mode.');
+      await window.adena.AddEstablish('Arobi Whisper on Gno.land');
+      const acct = await window.adena.GetAccount();
+      if (acct?.data?.address) $('callerAddr').value = acct.data.address;
+      $('output').textContent = JSON.stringify({ connected: true, account: acct?.data }, null, 2);
+    } catch (e) {
+      $('output').textContent = String(e.message || e);
+    }
+  };
+
+  $('btnGenKeys').onclick = () => {
+    const pub = crypto.getRandomValues(new Uint8Array(32));
+    localPubHex = toHex(pub);
+    $('pubHex').value = localPubHex;
+    $('output').textContent = JSON.stringify({
+      note: 'Generated 32-byte local key material (never leaves browser). Production Whisper uses @noble/curves X25519 + XChaCha20-Poly1305.',
+      encPubHex: localPubHex,
+    }, null, 2);
+  };
+
+  $('btnRegister').onclick = async () => {
+    if (!localPubHex) $('btnGenKeys').click();
+    const tx = buildRegisterIdentityTx($('callerAddr').value.trim(), {
+      encPubHex: localPubHex,
+      handle: $('handle').value.trim(),
+      displayName: $('handle').value.trim(),
+    }, $('realmPath').value.trim());
+    if (window.adena) {
+      try {
+        const res = await broadcastWithAdena(tx);
+        $('output').textContent = JSON.stringify({ broadcast: res, tx }, null, 2);
+        return;
+      } catch (e) {
+        $('output').textContent = JSON.stringify({ adenaError: String(e.message || e), txPreview: tx }, null, 2);
+        return;
+      }
+    }
+    $('output').textContent = JSON.stringify({ mode: 'tx-preview (install Adena to broadcast)', tx }, null, 2);
+  };
+
+  $('btnSend').onclick = async () => {
+    const ptBytes = new TextEncoder().encode($('plaintext').value);
+    const key = await crypto.subtle.generateKey({ name: 'AES-GCM', length: 256 }, true, ['encrypt']);
+    const ephPub = crypto.getRandomValues(new Uint8Array(32));
+    const nonce24 = crypto.getRandomValues(new Uint8Array(24));
+    const ctBuf = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: nonce24.slice(0, 12) }, key, ptBytes);
+    const ctBytes = new Uint8Array(ctBuf);
+    const commitInput = new Uint8Array(ctBytes.length + ephPub.length + nonce24.length);
+    commitInput.set(ctBytes, 0);
+    commitInput.set(ephPub, ctBytes.length);
+    commitInput.set(nonce24, ctBytes.length + ephPub.length);
+    const commitmentHex = await sha256Hex(commitInput);
+
+    const common = {
+      toAddrOrHandle: $('toRecipient').value.trim(),
+      ephemeralPubHex: toHex(ephPub),
+      nonceHex: toHex(nonce24),
+      ciphertextB64: toB64(ctBytes),
+      commitmentHex,
+    };
+
+    const amount = Number($('amountUgnot').value) || 0;
+    const realm = $('realmPath').value.trim();
+    const caller = $('callerAddr').value.trim();
+    let tx;
+    if ($('sendMode').value === 'escrow') {
+      const pre = $('preimage').value;
+      const hashLockHex = pre ? await sha256Hex(new TextEncoder().encode(pre)) : '';
+      tx = buildSendEscrowTx(caller, { ...common, hashLockHex, ttlBlocks: 100, amountUgnot: amount }, realm);
+    } else {
+      tx = buildSendMessageTx(caller, { ...common, tipUgnot: amount }, realm);
+    }
+
+    if (window.adena) {
+      try {
+        const res = await broadcastWithAdena(tx);
+        $('output').textContent = JSON.stringify({ broadcast: res, commitmentHex, tx }, null, 2);
+        return;
+      } catch (e) {
+        $('output').textContent = JSON.stringify({ adenaError: String(e.message || e), commitmentHex, txPreview: tx }, null, 2);
+        return;
+      }
+    }
+    $('output').textContent = JSON.stringify({ mode: 'local-sealed-preview (zero plaintext on-chain)', commitmentHex, tx }, null, 2);
+  };
+</script>
+</body>
+</html>

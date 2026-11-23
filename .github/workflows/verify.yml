@@ -1,0 +1,41 @@
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web-adapter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Adena wallet transaction adapter tests
+        run: node --test web/adena-whisper.test.mjs
+
+  gno-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+      - name: Checkout gno.land/p/arobi/assurance dependency
+        run: git clone --depth 1 https://github.com/PossumXI/gno-immaculate-sdk-agent-builder.git /tmp/gno-immaculate-sdk-agent-builder
+      - name: Clone and build Gno v1.8.0
+        run: |
+          git clone --depth 1 --branch v1.8.0 https://github.com/gnolang/gno.git /tmp/gno-v1.8.0
+          cd /tmp/gno-v1.8.0
+          GOWORK=off go build -o /tmp/gno-v1.8.0/build/gno ./gnovm/cmd/gno
+      - name: Sync dependency and run Gno lint and unit tests
+        env:
+          GNO_SRC: /tmp/gno-v1.8.0
+          ASSURANCE_REPO: /tmp/gno-immaculate-sdk-agent-builder
+        run: |
+          rm -rf "$GNO_SRC/examples/gno.land/p/arobi/signals"
+          mkdir -p "$GNO_SRC/examples/gno.land/p/arobi"
+          cp -r "$ASSURANCE_REPO/gno.land/p/arobi/signals" "$GNO_SRC/examples/gno.land/p/arobi/signals"
+          bash scripts/run-gno-tests.sh
