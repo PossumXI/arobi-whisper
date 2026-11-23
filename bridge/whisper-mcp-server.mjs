@@ -20,7 +20,7 @@ import {
 } from './gnosh-peer-relay.mjs';
 
 const SERVER_INFO = {
-  name: 'arobi-whisper-gno-mcp',
+  name: 'arobi-whisper-mcp',
   version: '1.0.0',
 };
 

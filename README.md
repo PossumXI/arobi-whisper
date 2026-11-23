@@ -26,13 +26,17 @@ mkdir -p "$HOME/src" && cd "$HOME/src"
 git clone https://github.com/PossumXI/arobi-whisper.git
 git clone https://github.com/PossumXI/immaculate-sdk-agent-builder.git
 
-# 3. One empty workspace file. Current gno resolves every gnomod.toml under it.
-#    `gno test` does not load packages from a second repo unless they sit in
-#    that workspace. Each package here already has the gnomod.toml that
-#    `gno mod init` writes (module path plus gno = "0.9").
+# 3. Unify both repos in one workspace. `immaculate-sdk-agent-builder` ships
+#    its own root `gnowork.toml` so it works standalone, and current `gno`'s
+#    workspace walker skips child directories that hold a nested `gnowork.toml`.
+#    Removing the nested file lets the parent `gnowork.toml` resolve both repos
+#    together for `gno test` and `gnodev .` (or run `bash scripts/run-gno-tests.sh`
+#    from `arobi-whisper` to use an automatic temporary workspace without editing
+#    either checkout).
+rm -f immaculate-sdk-agent-builder/gnowork.toml
 touch gnowork.toml
 
-# 4. Test the package and the realm.
+# 4. Test the package and the realm (or run `bash scripts/run-gno-tests.sh`).
 cd arobi-whisper
 gno test ./gno.land/p/arobi/whisper ./gno.land/r/arobi/whisper
 

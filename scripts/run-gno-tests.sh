@@ -1,15 +1,23 @@
 #!/usr/bin/env bash
 # Runs `gno test` for gno.land/p/arobi/whisper and gno.land/r/arobi/whisper.
 #
-# Current gno resolves imports from a gnowork.toml workspace. It does not
-# load gno.land/p/arobi/assurance by copying that package into
-# $GNOROOT/examples. signals and assurance come from a checkout of
-# immaculate-sdk-agent-builder.
+# Supports BOTH:
+#   1. Current github.com/gnolang/gno master (workspace resolution via gnowork.toml,
+#      avoiding nested-workspace SkipDir when immaculate-sdk-agent-builder has its own gnowork.toml).
+#   2. Gno v1.8.0 source checkouts (GNOROOT/examples/gno.land resolution when GNO_SRC points to v1.8.0).
 set -euo pipefail
 export GOWORK=off
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-ASSURANCE_REPO="${ASSURANCE_REPO:-$REPO/../immaculate-sdk-agent-builder}"
+if [ -n "${ASSURANCE_REPO:-}" ]; then
+  :
+elif [ -d "$REPO/../immaculate-sdk-agent-builder/gno.land/p/arobi/assurance" ]; then
+  ASSURANCE_REPO="$REPO/../immaculate-sdk-agent-builder"
+elif [ -d "$REPO/../gno-immaculate-sdk-agent-builder/gno.land/p/arobi/assurance" ]; then
+  ASSURANCE_REPO="$REPO/../gno-immaculate-sdk-agent-builder"
+else
+  ASSURANCE_REPO="$REPO/../immaculate-sdk-agent-builder"
+fi
 
 if [ -n "${GNO_BIN:-}" ]; then
   :
@@ -44,10 +52,41 @@ PARENT="$(cd "$REPO/.." && pwd)"
 run_in() {
   local root="$1"
   shift
-  ( cd "$root" && "$GNO_BIN" test "$@" )
+  ( cd "$root" && "$GNO_BIN" test -v "$@" )
 }
 
-if [ -f "$PARENT/gnowork.toml" ] && [ "${ASSURANCE_REAL#"$PARENT"/}" != "$ASSURANCE_REAL" ]; then
+run_v18_examples() {
+  echo "=== gno lint + test (Gno v1.8.0 examples workspace: $GNO_SRC) ==="
+  for pkg in p/arobi/signals p/arobi/assurance; do
+    rm -rf "$GNO_SRC/examples/gno.land/$pkg"
+    mkdir -p "$GNO_SRC/examples/gno.land/$(dirname "$pkg")"
+    cp -r "$ASSURANCE_REAL/gno.land/$pkg" "$GNO_SRC/examples/gno.land/$pkg"
+  done
+  for pkg in p/arobi/whisper r/arobi/whisper; do
+    rm -rf "$GNO_SRC/examples/gno.land/$pkg"
+    mkdir -p "$GNO_SRC/examples/gno.land/$(dirname "$pkg")"
+    cp -r "$REPO/gno.land/$pkg" "$GNO_SRC/examples/gno.land/$pkg"
+  done
+  for pkg in p/arobi/whisper r/arobi/whisper; do
+    ( cd "$GNO_SRC/examples/gno.land/$pkg" && "$GNO_BIN" lint . && "$GNO_BIN" test -v . )
+  done
+}
+
+# Gno v1.8.0 resolves cross-package imports from $GNO_SRC/examples/gno.land rather than gnowork.toml.
+if [ -n "${GNO_SRC:-}" ] && [ -d "$GNO_SRC/examples/gno.land/p/nt" ]; then
+  # Check if gno binary supports gnowork.toml cleanly; v1.8.0 checkouts lack gnowork.toml support on Windows.
+  if [ ! -f "$GNO_SRC/gnovm/pkg/packages/load.go" ] || ! grep -q "findWorkspaceRootDir" "$GNO_SRC/gnovm/pkg/packages/load.go" 2>/dev/null; then
+    run_v18_examples
+    echo "=== ALL AROBI WHISPER TESTS PASSED ==="
+    exit 0
+  fi
+fi
+
+# Note: gnolang/gno's workspace walker skips any child directory that contains its own gnowork.toml
+# (fs.SkipDir in gnovm/pkg/packages/load.go). Only reuse $PARENT/gnowork.toml when neither repo
+# contains a nested gnowork.toml; otherwise build a clean unified temporary workspace.
+if [ -f "$PARENT/gnowork.toml" ] && [ "${ASSURANCE_REAL#"$PARENT"/}" != "$ASSURANCE_REAL" ] \
+   && [ ! -f "$ASSURANCE_REAL/gnowork.toml" ] && [ ! -f "$REPO/gnowork.toml" ]; then
   echo "=== gno test (workspace $PARENT) ==="
   run_in "$REPO" ./gno.land/p/arobi/whisper ./gno.land/r/arobi/whisper
 else
@@ -58,7 +97,14 @@ else
   cp -a "$REPO/gno.land" "$WORK/whisper/gno.land"
   cp -a "$ASSURANCE_REAL/gno.land" "$WORK/sdk/gno.land"
   echo "=== gno test (temporary workspace) ==="
-  run_in "$WORK" ./whisper/gno.land/p/arobi/whisper ./whisper/gno.land/r/arobi/whisper
+  if ! run_in "$WORK" ./whisper/gno.land/p/arobi/whisper ./whisper/gno.land/r/arobi/whisper; then
+    if [ -n "${GNO_SRC:-}" ] && [ -d "$GNO_SRC/examples/gno.land" ]; then
+      echo "=== falling back to Gno v1.8.0 examples workspace ==="
+      run_v18_examples
+    else
+      exit 1
+    fi
+  fi
 fi
 
 echo "=== ALL AROBI WHISPER TESTS PASSED ==="

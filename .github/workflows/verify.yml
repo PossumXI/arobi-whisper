@@ -13,8 +13,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Run Adena wallet & Cross-Harness Agent Bus tests
-        run: node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs
+      - name: Run Adena wallet, Agent Bus & Gnosh Peer Relay / MCP tests
+        run: node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs bridge/gnosh-peer-relay.test.mjs
 
   gno-tests:
     runs-on: ubuntu-latest

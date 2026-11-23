@@ -106,7 +106,7 @@ test('Whisper MCP stdio server runs keygen, seal, open, and relay tx over JSON-R
 
   try {
     const init = await call('initialize', { protocolVersion: '2024-11-05' });
-    assert.equal(init.result.serverInfo.name, 'arobi-whisper-gno-mcp');
+    assert.equal(init.result.serverInfo.name, 'arobi-whisper-mcp');
 
     const list = await call('tools/list');
     assert.equal(list.result.tools.length, 5);
