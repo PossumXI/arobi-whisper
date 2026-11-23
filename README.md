@@ -39,16 +39,11 @@ Agents operating across isolated shells, containers, or harnesses (`Ullumii` ↔
 # 1. Generate X25519 agent bus keypairs on each host / container / harness
 node bridge/whisper-agent-bus.mjs keygen
 
-# 2. Seal a cross-harness handoff from Ullumii (Windows pwsh) -> gnosh.ai (Linux container)
-node bridge/whisper-agent-bus.mjs seal \
-  --from-harness ullumii --from-env win-pwsh --from-agent coordinator \
-  --to-harness gnosh.ai --to-env linux-container --to-agent executor \
-  --to-pubkey <RECIPIENT_X25519_B64> \
-  --kind handoff \
-  --payload '{"task":"rebalance","warrant":"0x...","merkleRoot":"0x..."}'
+# 2. Seal a cross-harness handoff JSON packet from Ullumii (Windows pwsh) -> gnosh.ai (Linux container)
+node bridge/whisper-agent-bus.mjs seal <RECIPIENT_X25519_PUB_HEX> packet.json > envelope.json
 
 # 3. Unseal & authenticate on the receiving harness
-node bridge/whisper-agent-bus.mjs open --privkey <RECIPIENT_PRIV_B64> --envelope <ENVELOPE_JSON>
+node bridge/whisper-agent-bus.mjs open <RECIPIENT_X25519_PRIV_HEX> envelope.json
 ```
 
 ---
