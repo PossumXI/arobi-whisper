@@ -8,7 +8,7 @@
 
 - **Name of your Build:** `Arobi Whisper`
 - **Brief description of this Build:**
-  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs.
+  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus built on Gno.land and deployed to the Gno.land Onyx testnet — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs. Tested with `gno test` on current master.
 - **Tags:** `Go`, `Smart Contracts`, `DeFi`, `Social`, `AI`, `dApps`
 - **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper`
 - **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`
@@ -40,7 +40,7 @@
 
 | Criterion (Weight) | What Judges Can Verify Immediately |
 | --- | --- |
-| **Technical Quality (40%)** | Package `p/arobi/whisper` + stateful realm `r/arobi/whisper`, `gno test` 5/5 + 2 Node test suites, green Ubuntu CI, verified on-chain `onyx-1` submissions (`17.98M` + `45.41M` gas). |
+| **Technical Quality (40%)** | Package `p/arobi/whisper` + stateful realm `r/arobi/whisper`, tested with `gno test` on current master (5/5) + 2 Node test suites, green Ubuntu CI, verified on-chain `onyx-1` submissions (`17.98M` + `45.41M` gas). |
 | **User Appeal (20%)** | Interactive 4-tab Adena browser playground (`web/index.html`) + `gnoweb` explorer (`Render("u/...")`, `Render("inbox/...")`), mirroring live `aura-genesis.org/whisper` Free/Pro GNOT UX. |
 | **Creativity (20%)** | Zero-server E2EE DeFi messenger + HTLC hash-locked encrypted escrows (`1%` claim fee / `0%` expired refund) + Cross-Shell / Cross-Harness Encrypted Agent Bus (`Ullumii` ↔ `gnosh.ai`, `1,104–1,221 ops/s` measured in `BENCHMARKS.md`). |
 | **Docs & Demo (20%)** | Complete `README.md`, `BENCHMARKS.md`, `CONTRIBUTORS.md`, reproducible CLI commands, and 2–3 min demo walkthrough. |

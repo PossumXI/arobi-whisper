@@ -1,8 +1,8 @@
 # Arobi Whisper
 
-**End-to-end encrypted DeFi messenger — client-sealed `X25519 + XChaCha20-Poly1305` chat paired with GNOT tipping, HTLC/expiry DeFi escrows, programmable anti-spam inbox rules, and RFC 6962 cryptographic evidence proofs.**
+**End-to-end encrypted DeFi messenger built on Gno.land — client-sealed `X25519 + XChaCha20-Poly1305` chat paired with GNOT tipping, HTLC/expiry DeFi escrows, programmable anti-spam inbox rules, and RFC 6962 cryptographic evidence proofs. Deployed to the Gno.land Onyx testnet (`onyx-1`).**
 
-Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web app at [aura-genesis.org/whisper](https://aura-genesis.org/whisper)) for the **Gnome Tavern hackathon**.
+Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web app at [aura-genesis.org/whisper](https://aura-genesis.org/whisper)) for the **Gnome Tavern hackathon**. Tested with `gno test` on current master.
 
 - **1080p Demo Video (2m 11s):** [Watch / Download MP4](https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4)
 - **Live Adena Browser Playground (100/100/100 PageSpeed):** [possumxi.github.io/arobi-whisper/web/](https://possumxi.github.io/arobi-whisper/web/)
@@ -54,6 +54,8 @@ Deploy commands are in [Deploying to Gno.land Onyx Testnet (`onyx-1`)](#deployin
 
 ## Why Arobi Whisper?
 
+Arobi Whisper is an agent chat realm built on Gno.land and deployed to the Gno.land Onyx testnet (`onyx-1`).
+
 - **Zero Centralized Server / Zero TOFU:** Your X25519 encryption public key and claim-once `@handle` bind directly to your native `g1...` address via `cur.Previous().Address()`.
 - **True End-to-End Encryption:** Every message is sealed client-side with an ephemeral X25519 key + `HKDF-SHA256` (`arobi-whisper-x25519-xchacha-v1`) + `XChaCha20-Poly1305` (24-byte nonce). Only ciphertext, ephemeral public key, nonce, and `SHA-256` commitment ever touch Gno.land state.
 - **Tiered GNOT Subscriptions & Service Fees (mirroring live `aura-genesis.org/whisper`):**
@@ -103,7 +105,7 @@ bash scripts/run-gno-tests.sh
 node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs
 ```
 
-`scripts/run-gno-tests.sh` runs `gno test` on the current toolchain (a parent `gnowork.toml` when this repo sits next to `immaculate-sdk-agent-builder`, otherwise a temporary workspace). Node tests cover the wallet adapter and the agent bus. Together they check:
+`scripts/run-gno-tests.sh` is tested with `gno test` on current master (a parent `gnowork.toml` when this repo sits next to `immaculate-sdk-agent-builder`, otherwise a temporary workspace). Node tests cover the wallet adapter and the agent bus. Together they check:
 - Handle normalization & reserved-name protection (`@arobi`, `@ullumii`, duplicates)
 - X25519 key, 24-byte nonce, and canonical AEAD Base64 ciphertext validation
 - Free (`110` credits, `4 KiB`) vs Pro (`25 GNOT` / 30 days, `2,500` credits, `16 KiB`, DeFi escrows) metering, `0.01 GNOT` overage billing, and private opaque operator fee settlement (`InitOperator` / `SetSettlementSink` / `CollectServiceFees` with zero wallet address disclosure)
