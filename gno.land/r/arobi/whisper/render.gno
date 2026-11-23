@@ -39,6 +39,9 @@ func renderHome() string {
 	b.WriteString("evidence proofs powered by `gno.land/p/arobi/assurance`. Plaintext never touches chain state.\n\n")
 
 	b.WriteString("| Metric | Value |\n| --- | --- |\n")
+	b.WriteString("| Free Tier | `" + strconv.FormatInt(FreePeriodCredits, 10) + "` credits, `4 KiB` max ciphertext |\n")
+	b.WriteString("| Pro Subscription (30 days) | `" + strconv.FormatInt(subscriptionPriceUgnot, 10) + "ugnot` (`" + strconv.FormatInt(ProPeriodCredits, 10) + "` credits, `16 KiB` ciphertext, DeFi HTLC escrows) |\n")
+	b.WriteString("| Overage / Escrow Settlement Fee | `" + strconv.FormatInt(overageFeeUgnot, 10) + "ugnot` per overage msg · `" + strconv.FormatInt(escrowFeeBps, 10) + " bps` on claimed escrows |\n")
 	b.WriteString("| Registered Identities | " + strconv.Itoa(len(identityOrder)) + " |\n")
 	b.WriteString("| Encrypted Messages | " + strconv.Itoa(len(messages)) + " |\n")
 	b.WriteString("| DeFi Escrows Created | " + strconv.Itoa(len(escrows)) + " |\n")

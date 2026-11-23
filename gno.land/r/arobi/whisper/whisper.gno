@@ -1,13 +1,16 @@
 // Package whisper is the stateful Gno.land realm for Arobi Whisper — an end-to-end
-// encrypted DeFi messenger with native GNOT tipping, conditional HTLC/expiry escrows,
-// programmable anti-spam inbox gating, and RFC 6962 cryptographic evidence anchoring
+// encrypted DeFi messenger with tiered subscriptions paid in GNOT (mirroring
+// aura-genesis.org/whisper: Free 110 credits vs Pro 2,500 credits / 30 days),
+// pay-per-message overage, native GNOT tipping, conditional HTLC/expiry escrows,
+// programmable anti-spam inbox gating, and RFC 6962 cryptographic evidence proofs
 // built directly on gno.land/p/arobi/assurance.
 //
 // Zero plaintext or secret keys ever touch chain state. Clients seal messages locally
 // using X25519 + HKDF-SHA256 + XChaCha20-Poly1305 (exact Arobi Whisper v1 wire format).
 //
-// Strictly peer-to-peer settlement: 100% of tips and claimed escrows forward directly
-// to the recipient, and 100% of expired escrows refund directly to the sender.
+// Settlement privacy: service subscription and protocol fees are enforced on-chain in
+// GNOT, while operator settlement routing is configured privately at deployment time
+// and never hardcoded or publicly disclosed in source code, events, or gnoweb pages.
 package whisper
 
 import (
@@ -25,32 +28,57 @@ import (
 
 const (
 	denom = "ugnot"
-	// MinEscrowUgnot prevents dust escrows.
-	MinEscrowUgnot int64 = 1000
-	// MinEscrowTTLBlocks is the minimum escrow lock window before sender refund.
+
+	// Tier quotas mirroring live Arobi Whisper (aura-genesis.org/whisper).
+	TierFree = "free"
+	TierPro  = "pro"
+
+	FreePeriodCredits int64 = 110
+	ProPeriodCredits  int64 = 2500
+	FreeMaxCipherB64  int   = 4096  // 4 KiB base64 on Free tier
+	ProMaxCipherB64   int   = 16384 // 16 KiB base64 on Pro tier
+
+	// ~30 days at ~2s/block.
+	SubscriptionPeriodBlocks int64 = 1296000
+
+	// Escrow safety bounds.
+	MinEscrowUgnot     int64 = 1000
 	MinEscrowTTLBlocks int64 = 5
-	// MaxEscrowTTLBlocks caps escrow lock duration (~1 year at 2s blocks).
 	MaxEscrowTTLBlocks int64 = 15000000
+	MaxEscrowFeeBps    int64 = 500 // hard protocol cap: never > 5%
 )
 
 // Identity binds a native Gno g1... address to local X25519/Ed25519 messaging keys,
-// an optional claim-once @handle, and programmable anti-spam inbox rules.
+// an optional claim-once @handle, subscription tier & credits, and anti-spam rules.
 type Identity struct {
-	Address       address
-	EncPubHex     string // 32-byte X25519 public key (hex)
-	SignPubHex    string // 32-byte Ed25519 public key (hex, optional cross-chain parity)
-	Handle        string // optional claim-once handle
-	DisplayName   string
-	MinTipUgnot   int64
-	AllowListOnly bool
-	Allowed       *avl.Tree // senderAddr -> bool
-	InboxIDs      []uint64
-	SentIDs       []uint64
-	CreatedHeight int64
-	UpdatedHeight int64
+	Address          address
+	EncPubHex        string // 32-byte X25519 public key (hex)
+	SignPubHex       string // 32-byte Ed25519 public key (hex, optional cross-chain parity)
+	Handle           string // optional claim-once handle
+	DisplayName      string
+	Tier             string // TierFree or TierPro
+	Credits          int64
+	SubExpiresHeight int64
+	MinTipUgnot      int64
+	AllowListOnly    bool
+	Allowed          *avl.Tree // senderAddr -> bool
+	InboxIDs         []uint64
+	SentIDs          []uint64
+	CreatedHeight    int64
+	UpdatedHeight    int64
 }
 
 var (
+	// Service pricing in ugnot (configurable by operator; zero hardcoded payout wallets).
+	subscriptionPriceUgnot int64 = 25000000 // 25 GNOT per 30-day Pro period
+	overageFeeUgnot        int64 = 10000    // 0.01 GNOT pay-per-message when credits == 0
+	escrowFeeBps           int64 = 100      // 1.00% settlement fee on claimed DeFi escrows
+
+	// Private operator & opaque settlement vault (never printed in Render or emitted in events).
+	operator           address
+	settlementSink     address
+	accruedServiceFees int64
+
 	identities    = avl.NewTree() // addr.String() -> *Identity
 	handles       = avl.NewTree() // handle -> addr.String()
 	identityOrder []string
@@ -64,7 +92,81 @@ var (
 	totalEscrowed int64
 )
 
+// ── Private Operator & Settlement Configuration ──────────────────────────────
+
+// InitOperator claims one-time deployer operator control after package deployment.
+func InitOperator(cur realm) {
+	prev := cur.Previous()
+	if !prev.IsUserCall() {
+		panic("init operator with a direct user call")
+	}
+	if operator != "" {
+		panic("operator already initialized")
+	}
+	operator = prev.Address()
+}
+
+// TransferOperator transfers operator control to a new address (operator only).
+func TransferOperator(cur realm, next address) {
+	mustOperator(cur)
+	if !next.IsValid() {
+		panic("invalid operator address")
+	}
+	operator = next
+}
+
+// SetSettlementSink privately sets an optional direct settlement sink for service fees
+// (operator only; never exposed in Render() or public chain events).
+func SetSettlementSink(cur realm, sink address) {
+	mustOperator(cur)
+	if sink != "" && !sink.IsValid() {
+		panic("invalid settlement address")
+	}
+	settlementSink = sink
+}
+
+// SetPricing updates GNOT service pricing (operator only; escrowFeeBps capped at 5%).
+func SetPricing(cur realm, subPriceUgnot, overageUgnot, escFeeBps int64) {
+	mustOperator(cur)
+	if subPriceUgnot < 0 || overageUgnot < 0 {
+		panic("prices cannot be negative")
+	}
+	if escFeeBps < 0 || escFeeBps > MaxEscrowFeeBps {
+		panic("escrowFeeBps out of range (0..500)")
+	}
+	subscriptionPriceUgnot = subPriceUgnot
+	overageFeeUgnot = overageUgnot
+	escrowFeeBps = escFeeBps
+}
+
+// CollectServiceFees withdraws ONLY accrued service fees (subscriptions, overages,
+// settled escrow fees) to an operator-specified destination. Strictly isolated from
+// user-locked DeFi escrows.
+func CollectServiceFees(cur realm, to address) int64 {
+	mustOperator(cur)
+	if !to.IsValid() {
+		panic("invalid destination address")
+	}
+	amount := accruedServiceFees
+	if amount <= 0 {
+		return 0
+	}
+	accruedServiceFees = 0
+	bk := banker.NewBanker(banker.BankerTypeRealmSend, cur)
+	bk.SendCoins(cur.Address(), to, chain.Coins{chain.NewCoin(denom, amount)})
+	return amount
+}
+
+// ── Public Pricing Queries (no payout addresses exposed) ─────────────────────
+
+func SubscriptionPriceUgnot() int64 { return subscriptionPriceUgnot }
+func OverageFeeUgnot() int64        { return overageFeeUgnot }
+func EscrowFeeBps() int64           { return escrowFeeBps }
+
+// ── Identity, Tier & Subscription Lifecycle ──────────────────────────────────
+
 // RegisterIdentity registers (or updates displayName/keys for) the caller's E2EE identity.
+// New accounts start on the Free tier (110 credits) matching aura-genesis.org/whisper.
 // Handles are strictly claim-once: once claimed, a handle cannot be changed or stolen.
 func RegisterIdentity(cur realm, encPubHex, signPubHex, handle, displayName string) {
 	prev := cur.Previous()
@@ -132,6 +234,8 @@ func RegisterIdentity(cur realm, encPubHex, signPubHex, handle, displayName stri
 		SignPubHex:    signPubHex,
 		Handle:        normHandle,
 		DisplayName:   displayName,
+		Tier:          TierFree,
+		Credits:       FreePeriodCredits,
 		Allowed:       avl.NewTree(),
 		CreatedHeight: height,
 		UpdatedHeight: height,
@@ -142,12 +246,56 @@ func RegisterIdentity(cur realm, encPubHex, signPubHex, handle, displayName stri
 	chain.Emit("WhisperIdentityRegistered",
 		"addr", key,
 		"handle", normHandle,
+		"tier", TierFree,
+		"credits", strconv.FormatInt(FreePeriodCredits, 10),
 		"enc_pub", encPubHex,
 		"height", strconv.FormatInt(height, 10),
 	)
 }
 
-// RotateKeys rotates the caller's X25519 / Ed25519 keys without losing handle or inbox history.
+// Subscribe upgrades or extends the caller's Whisper identity to the Pro tier for 30 days
+// (2,500 credits, 16 KiB envelopes, and DeFi HTLC escrows) by paying exact SubscriptionPriceUgnot in GNOT.
+func Subscribe(cur realm) int64 {
+	prev := cur.Previous()
+	if !prev.IsUserCall() {
+		panic("subscribe with a direct user call")
+	}
+	id := mustIdentity(prev.Address().String())
+	paid := sentUgnot()
+	if paid != subscriptionPriceUgnot {
+		panic("send exact subscription price " + strconv.FormatInt(subscriptionPriceUgnot, 10) + denom +
+			"; got " + strconv.FormatInt(paid, 10) + denom)
+	}
+
+	height := runtime.ChainHeight()
+	baseExpiry := height
+	if id.SubExpiresHeight > height {
+		baseExpiry = id.SubExpiresHeight
+	}
+	id.Tier = TierPro
+	id.SubExpiresHeight = baseExpiry + SubscriptionPeriodBlocks
+	id.Credits = ProPeriodCredits
+	id.UpdatedHeight = height
+
+	settleServiceFee(cur, paid)
+
+	chain.Emit("WhisperSubscribed",
+		"addr", id.Address.String(),
+		"tier", TierPro,
+		"paid_ugnot", strconv.FormatInt(paid, 10),
+		"credits", strconv.FormatInt(id.Credits, 10),
+		"expires_height", strconv.FormatInt(id.SubExpiresHeight, 10),
+	)
+	return id.SubExpiresHeight
+}
+
+// EffectiveTier returns TierPro if the identity has an active subscription, else TierFree.
+func EffectiveTier(addrOrHandle string) string {
+	id := mustResolveIdentity(addrOrHandle)
+	return effectiveTierOf(id, runtime.ChainHeight())
+}
+
+// RotateKeys rotates the caller's X25519 / Ed25519 keys without losing handle, subscription, or inbox history.
 func RotateKeys(cur realm, newEncPubHex, newSignPubHex string) {
 	prev := cur.Previous()
 	if !prev.IsUserCall() {
@@ -203,8 +351,12 @@ func SetAllowedSender(cur realm, senderAddr string, allowed bool) {
 	id.UpdatedHeight = runtime.ChainHeight()
 }
 
+// ── E2EE Messaging + GNOT Tipping & Tier Metering ────────────────────────────
+
 // SendMessage delivers a client-sealed E2EE ciphertext envelope on-chain.
-// Any attached ugnot tip (required >= recipient.MinTipUgnot) forwards 100% straight to recipient.
+// Consumes 1 message credit from the sender's tier quota; if credits are exhausted,
+// collects OverageFeeUgnot in GNOT automatically. Any remaining attached GNOT
+// (required >= recipient.MinTipUgnot) forwards 100% straight to recipient.
 func SendMessage(
 	cur realm,
 	toAddrOrHandle string,
@@ -222,13 +374,34 @@ func SendMessage(
 	checkCanSend(sender, recipient)
 	validateEnvelopeFields(ephemeralPubHex, nonceHex, ciphertextB64, commitmentHex)
 
-	tip := sentUgnot()
-	if tip < recipient.MinTipUgnot {
-		panic("recipient requires minimum tip of " + strconv.FormatInt(recipient.MinTipUgnot, 10) + denom +
-			"; got " + strconv.FormatInt(tip, 10) + denom)
+	height := runtime.ChainHeight()
+	tier := effectiveTierOf(sender, height)
+	maxCT := FreeMaxCipherB64
+	if tier == TierPro {
+		maxCT = ProMaxCipherB64
+	}
+	if len(ciphertextB64) > maxCT {
+		panic("ciphertext exceeds " + tier + " tier payload limit (" + strconv.Itoa(maxCT) + " chars); subscribe to Pro for 16 KiB")
 	}
 
-	height := runtime.ChainHeight()
+	sent := sentUgnot()
+	var serviceFee int64
+	if sender.Credits > 0 {
+		sender.Credits--
+	} else {
+		if sent < overageFeeUgnot {
+			panic("message credits exhausted: subscribe to Pro or attach at least " +
+				strconv.FormatInt(overageFeeUgnot, 10) + denom + " overage fee")
+		}
+		serviceFee = overageFeeUgnot
+	}
+
+	tip := sent - serviceFee
+	if tip < recipient.MinTipUgnot {
+		panic("recipient requires minimum tip of " + strconv.FormatInt(recipient.MinTipUgnot, 10) + denom +
+			"; got " + strconv.FormatInt(tip, 10) + denom + " after service fee")
+	}
+
 	msgID := uint64(len(messages)) + 1
 	env := &pw.SealedEnvelope{
 		ID:              msgID,
@@ -250,6 +423,9 @@ func SendMessage(
 	recipient.InboxIDs = append(recipient.InboxIDs, msgID)
 	sender.SentIDs = append(sender.SentIDs, msgID)
 
+	if serviceFee > 0 {
+		settleServiceFee(cur, serviceFee)
+	}
 	if tip > 0 {
 		totalTips += tip
 		bk := banker.NewBanker(banker.BankerTypeRealmSend, cur)
@@ -260,20 +436,20 @@ func SendMessage(
 		"id", strconv.FormatUint(msgID, 10),
 		"from", env.From,
 		"to", env.To,
+		"tier", tier,
 		"commitment", commitmentHex,
 		"tip_ugnot", strconv.FormatInt(tip, 10),
+		"service_fee_ugnot", strconv.FormatInt(serviceFee, 10),
 		"leaf_index", strconv.FormatUint(env.LeafIndex, 10),
 		"acc_root", assurance.Hex(evidenceAcc.Root()),
 	)
 	return msgID
 }
 
+// ── DeFi Encrypted Conditional Escrows (Pro Tier + 1% Settlement Fee) ────────
+
 // SendEscrowMessage sends an E2EE ciphertext envelope paired with a locked DeFi GNOT escrow.
-//
-// If hashLockHex is non-empty (64-char SHA-256 hex), the recipient must reveal the matching
-// preimage in ClaimEscrow (atomic HTLC encrypted trade / bounty / secret delivery).
-// If hashLockHex is empty, the recipient may claim directly before expiry.
-// After ExpiryHeight, the sender may call RefundEscrow to reclaim 100% with zero fee.
+// Requires an active Pro subscription (matching Whisper's paid tier for advanced DeFi flows).
 func SendEscrowMessage(
 	cur realm,
 	toAddrOrHandle string,
@@ -289,6 +465,11 @@ func SendEscrowMessage(
 		panic("send escrow message with a direct user call")
 	}
 	sender := mustIdentity(prev.Address().String())
+	height := runtime.ChainHeight()
+	if effectiveTierOf(sender, height) != TierPro {
+		panic("DeFi encrypted escrows require an active Pro subscription (call Subscribe with " +
+			strconv.FormatInt(subscriptionPriceUgnot, 10) + denom + ")")
+	}
 	recipient := mustResolveIdentity(toAddrOrHandle)
 	if sender.Address == recipient.Address {
 		panic("cannot create escrow to self")
@@ -313,7 +494,10 @@ func SendEscrowMessage(
 		panic("escrow amount below recipient min tip")
 	}
 
-	height := runtime.ChainHeight()
+	if sender.Credits > 0 {
+		sender.Credits--
+	}
+
 	msgID := uint64(len(messages)) + 1
 	escID := uint64(len(escrows)) + 1
 
@@ -365,8 +549,8 @@ func SendEscrowMessage(
 	return msgID, escID
 }
 
-// ClaimEscrow settles 100% of an open DeFi escrow directly to its recipient
-// (verifying SHA-256(preimage) == HashLockHex if hash-locked).
+// ClaimEscrow settles an open DeFi escrow to its recipient (verifying preimage if hash-locked).
+// Collects EscrowFeeBps (default 1%) service settlement fee in GNOT; remainder forwards to recipient.
 func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 	prev := cur.Previous()
 	if !prev.IsUserCall() {
@@ -386,7 +570,12 @@ func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 		}
 	}
 
-	payout := esc.AmountUgnot
+	fee := (esc.AmountUgnot * escrowFeeBps) / 10000
+	if fee >= esc.AmountUgnot {
+		fee = 0
+	}
+	payout := esc.AmountUgnot - fee
+
 	esc.Status = pw.EscrowClaimed
 	esc.SettledHeight = runtime.ChainHeight()
 
@@ -394,11 +583,15 @@ func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 
 	bk := banker.NewBanker(banker.BankerTypeRealmSend, cur)
 	bk.SendCoins(cur.Address(), caller, chain.Coins{chain.NewCoin(denom, payout)})
+	if fee > 0 {
+		settleServiceFee(cur, fee)
+	}
 
 	chain.Emit("WhisperEscrowClaimed",
 		"escrow_id", strconv.FormatUint(esc.ID, 10),
 		"recipient", esc.Recipient,
 		"payout_ugnot", strconv.FormatInt(payout, 10),
+		"service_fee_ugnot", strconv.FormatInt(fee, 10),
 		"leaf_index", strconv.FormatUint(leafIdx, 10),
 		"acc_root", assurance.Hex(evidenceAcc.Root()),
 	)
@@ -441,34 +634,21 @@ func RefundEscrow(cur realm, escrowID uint64) int64 {
 	return esc.AmountUgnot
 }
 
+// ── Public Read & Proof Queries ──────────────────────────────────────────────
+
 // ResolveRecipient returns the public directory record for an address or @handle.
 func ResolveRecipient(addrOrHandle string) string {
 	id := mustResolveIdentity(addrOrHandle)
-	return id.Address.String() + "|" + id.EncPubHex + "|" + id.Handle + "|" +
+	tier := effectiveTierOf(id, runtime.ChainHeight())
+	return id.Address.String() + "|" + id.EncPubHex + "|" + id.Handle + "|" + tier + "|" +
 		strconv.FormatInt(id.MinTipUgnot, 10) + "|" + strconv.FormatBool(id.AllowListOnly)
 }
 
-// Root returns the global RFC 6962 accumulator root over all Whisper messages & escrows.
-func Root() string {
-	return assurance.Hex(evidenceAcc.Root())
-}
+func Root() string            { return assurance.Hex(evidenceAcc.Root()) }
+func AccumulatorSize() uint64 { return evidenceAcc.Size() }
+func MessageCount() uint64    { return uint64(len(messages)) }
+func EscrowCount() uint64     { return uint64(len(escrows)) }
 
-// AccumulatorSize returns the number of RFC 6962 evidence leaves recorded by Whisper.
-func AccumulatorSize() uint64 {
-	return evidenceAcc.Size()
-}
-
-// MessageCount returns the total number of encrypted envelopes delivered.
-func MessageCount() uint64 {
-	return uint64(len(messages))
-}
-
-// EscrowCount returns the total number of DeFi escrows created.
-func EscrowCount() uint64 {
-	return uint64(len(escrows))
-}
-
-// MessageLeafHex returns the RFC 6962 leaf hash of message msgID.
 func MessageLeafHex(msgID uint64) string {
 	if msgID == 0 || msgID > uint64(len(messages)) {
 		panic("no message " + strconv.FormatUint(msgID, 10))
@@ -476,7 +656,6 @@ func MessageLeafHex(msgID uint64) string {
 	return assurance.Hex(messages[msgID-1].LeafHash())
 }
 
-// ProofForLeaf returns the comma-separated RFC 6962 audit path for leafIndex at treeSize.
 func ProofForLeaf(leafIndex, treeSize uint64) string {
 	proof, err := evidenceAcc.Proof(leafIndex, treeSize)
 	if err != nil {
@@ -489,7 +668,6 @@ func ProofForLeaf(leafIndex, treeSize uint64) string {
 	return strings.Join(parts, ",")
 }
 
-// VerifyLeafProof checks an RFC 6962 inclusion proof on-chain against Whisper's historical root.
 func VerifyLeafProof(leafIndex, treeSize uint64, leafHex, proofCSV string) bool {
 	if leafIndex >= treeSize || treeSize > evidenceAcc.Size() {
 		return false
@@ -513,6 +691,40 @@ func VerifyLeafProof(leafIndex, treeSize uint64, leafHex, proofCSV string) bool 
 		}
 	}
 	return assurance.VerifyInclusion(leafIndex, treeSize, leaf, proof, rootAt)
+}
+
+// ── Internal Helpers ─────────────────────────────────────────────────────────
+
+func settleServiceFee(cur realm, amount int64) {
+	if amount <= 0 {
+		return
+	}
+	if settlementSink != "" {
+		bk := banker.NewBanker(banker.BankerTypeRealmSend, cur)
+		bk.SendCoins(cur.Address(), settlementSink, chain.Coins{chain.NewCoin(denom, amount)})
+		return
+	}
+	accruedServiceFees += amount
+}
+
+func mustOperator(cur realm) {
+	prev := cur.Previous()
+	if !prev.IsUserCall() {
+		panic("operator action requires a direct user call")
+	}
+	if operator == "" {
+		panic("operator not initialized")
+	}
+	if prev.Address() != operator {
+		panic("unauthorized: operator only")
+	}
+}
+
+func effectiveTierOf(id *Identity, height int64) string {
+	if id.Tier == TierPro && id.SubExpiresHeight > height {
+		return TierPro
+	}
+	return TierFree
 }
 
 func mustIdentity(addr string) *Identity {

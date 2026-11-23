@@ -33,6 +33,10 @@ export function buildRegisterIdentityTx(caller, { encPubHex, signPubHex = '', ha
   return buildWhisperTx(caller, 'RegisterIdentity', [encPubHex, signPubHex, handle, displayName], 0, pkgPath);
 }
 
+export function buildSubscribeTx(caller, subscriptionPriceUgnot = 25000000, pkgPath = WHISPER_REALM_PATH) {
+  return buildWhisperTx(caller, 'Subscribe', [], subscriptionPriceUgnot, pkgPath);
+}
+
 export function buildSetInboxPolicyTx(caller, { minTipUgnot = 0, allowListOnly = false }, pkgPath = WHISPER_REALM_PATH) {
   return buildWhisperTx(caller, 'SetInboxPolicy', [minTipUgnot, allowListOnly ? 'true' : 'false'], 0, pkgPath);
 }

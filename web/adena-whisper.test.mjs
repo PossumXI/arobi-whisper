@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   WHISPER_REALM_PATH,
   buildRegisterIdentityTx,
+  buildSubscribeTx,
   buildSetInboxPolicyTx,
   buildSendMessageTx,
   buildSendEscrowTx,
@@ -19,6 +20,10 @@ test('Adena tx builders emit canonical Gno /vm.m_call payloads', () => {
   assert.equal(reg.messages[0].value.func, 'RegisterIdentity');
   assert.deepEqual(reg.messages[0].value.args, [enc, '', 'alice_gno', 'Alice']);
   assert.equal(reg.messages[0].value.send, '');
+
+  const sub = buildSubscribeTx(caller, 25000000);
+  assert.equal(sub.messages[0].value.func, 'Subscribe');
+  assert.equal(sub.messages[0].value.send, '25000000ugnot');
 
   const pol = buildSetInboxPolicyTx(caller, { minTipUgnot: 5000, allowListOnly: true });
   assert.deepEqual(pol.messages[0].value.args, ['5000', 'true']);

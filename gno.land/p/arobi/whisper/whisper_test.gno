@@ -84,3 +84,26 @@ func TestEnvelopeAndEscrowIntegrateWithArobiAssuranceAccumulator(t *testing.T) {
 	uassert.NoError(t, err)
 	uassert.True(t, assurance.VerifyInclusion(1, 2, esc.LeafHash(), p1, root))
 }
+
+func TestCrossHarnessAgentBusRouteCommitment(t *testing.T) {
+	route := AgentBusRoute{
+		FromHarness:         "ullumii",
+		FromEnv:             "cloud-worker",
+		FromAgentID:         "ullumii-coord-1",
+		ToHarness:           "gnosh.ai",
+		ToEnv:               "linux-container",
+		ToAgentID:           "gnosh-worker-1",
+		Kind:                AgentKindWarrantDelegate,
+		CorrelationID:       "corr-99",
+		ParentWarrantDigest: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		EvidenceRootHex:     "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+	}
+	uassert.NoError(t, route.Validate())
+	bound, err := BindAgentEnvelopeCommitment(route, "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc")
+	uassert.NoError(t, err)
+	uassert.Equal(t, 64, len(bound))
+
+	bad := route
+	bad.Kind = "invalid_kind"
+	uassert.Error(t, bad.Validate())
+}

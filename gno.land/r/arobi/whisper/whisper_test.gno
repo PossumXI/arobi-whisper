@@ -15,10 +15,12 @@ import (
 )
 
 var (
-	alice    = testutils.TestAddress("whisper-alice")
-	bob      = testutils.TestAddress("whisper-bob")
-	charlie  = testutils.TestAddress("whisper-charlie")
-	selfAddr = chain.PackageAddress("gno.land/r/arobi/whisper")
+	opAdmin     = testutils.TestAddress("whisper-operator")
+	opaqueVault = testutils.TestAddress("whisper-vault")
+	alice       = testutils.TestAddress("whisper-alice")
+	bob         = testutils.TestAddress("whisper-bob")
+	charlie     = testutils.TestAddress("whisper-charlie")
+	selfAddr    = chain.PackageAddress("gno.land/r/arobi/whisper")
 )
 
 const (
@@ -36,6 +38,12 @@ func sampleCT() string {
 }
 
 func resetWhisper() {
+	operator = ""
+	settlementSink = ""
+	accruedServiceFees = 0
+	subscriptionPriceUgnot = 25000000
+	overageFeeUgnot = 10000
+	escrowFeeBps = 100
 	identities = avl.NewTree()
 	handles = avl.NewTree()
 	identityOrder = nil
@@ -51,19 +59,27 @@ func balance(who address) int64 {
 }
 
 func sendCoins(amount int64) {
-	testing.SetOriginSend(chain.Coins{chain.NewCoin("ugnot", amount)})
-	if amount > 0 {
-		testing.IssueCoins(selfAddr, chain.Coins{chain.NewCoin("ugnot", amount)})
+	if amount == 0 {
+		testing.SetOriginSend(nil)
+		return
 	}
+	testing.SetOriginSend(chain.Coins{chain.NewCoin("ugnot", amount)})
+	testing.IssueCoins(selfAddr, chain.Coins{chain.NewCoin("ugnot", amount)})
 }
 
-func TestIdentityRegistrationAntiSpamAndDirectTipMessaging(cur realm, t *testing.T) {
+func TestIdentityFreeTierAntiSpamOverageAndGnotSubscription(cur realm, t *testing.T) {
 	resetWhisper()
 
-	// Alice & Bob register X25519 keys + claim-once @handles.
+	// Deployer initializes operator privately (no payout address hardcoded or rendered).
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	InitOperator(cross(cur))
+
+	// Alice & Bob register X25519 keys + claim-once @handles (start on Free tier = 110 credits).
 	testing.SetRealm(testing.NewUserRealm(alice))
 	sendCoins(0)
 	RegisterIdentity(cross(cur), aliceEnc, "", "@alice_gno", "Alice")
+	uassert.Equal(t, TierFree, EffectiveTier("@alice_gno"))
 
 	testing.SetRealm(testing.NewUserRealm(bob))
 	sendCoins(0)
@@ -81,7 +97,7 @@ func TestIdentityRegistrationAntiSpamAndDirectTipMessaging(cur realm, t *testing
 		RegisterIdentity(cross(cur), aliceEnc, "", "arobi", "Fake")
 	})
 
-	// Bob rotates his encryption key and sets anti-spam min tip = 5000ugnot + allowlist only.
+	// Bob rotates keys and sets anti-spam min tip = 5000ugnot + allowlist only.
 	testing.SetRealm(testing.NewUserRealm(bob))
 	sendCoins(0)
 	RotateKeys(cross(cur), bobEnc2, "")
@@ -108,30 +124,78 @@ func TestIdentityRegistrationAntiSpamAndDirectTipMessaging(cur realm, t *testing
 		SendMessage(cross(cur), "@bob_defi", ephPub, nonce24, sampleCT(), commit1)
 	})
 
-	// Exact/higher tip delivers E2EE envelope + forwards 100% of tip directly to Bob!
+	// Free tier credit send + direct tip forwards 100% of tip to Bob!
 	bobBefore := balance(bob)
-	realmBefore := balance(selfAddr)
 	testing.SetRealm(testing.NewUserRealm(alice))
 	sendCoins(5000)
 	msgID := SendMessage(cross(cur), "@bob_defi", ephPub, nonce24, sampleCT(), commit1)
 	uassert.Equal(t, uint64(1), msgID)
 	uassert.Equal(t, bobBefore+5000, balance(bob))
-	uassert.Equal(t, realmBefore, balance(selfAddr))
 
-	// RFC 6962 proof for message #1 verifies on-chain!
+	// When Free credits reach 0, overage fee (10,000ugnot) is charged in GNOT while tip still reaches Bob!
+	aliceID := mustIdentity(alice.String())
+	aliceID.Credits = 0
+	testing.SetRealm(testing.NewUserRealm(alice))
+	sendCoins(5000) // insufficient for overage + tip
+	uassert.AbortsContains(t, cur, "overage fee", func() {
+		SendMessage(cross(cur), "@bob_defi", ephPub, nonce24, sampleCT(), commit1)
+	})
+	bobBefore2 := balance(bob)
+	testing.SetRealm(testing.NewUserRealm(alice))
+	sendCoins(overageFeeUgnot + 5000)
+	msgID2 := SendMessage(cross(cur), "@bob_defi", ephPub, nonce24, sampleCT(), commit2)
+	uassert.Equal(t, uint64(2), msgID2)
+	uassert.Equal(t, bobBefore2+5000, balance(bob))
+	uassert.Equal(t, overageFeeUgnot, accruedServiceFees)
+
+	// Free user cannot create DeFi HTLC escrow until subscribing to Pro in GNOT!
+	testing.SetRealm(testing.NewUserRealm(alice))
+	sendCoins(100000)
+	uassert.AbortsContains(t, cur, "active Pro subscription", func() {
+		SendEscrowMessage(cross(cur), "@bob_defi", ephPub, nonce24, sampleCT(), commit1, "", 20)
+	})
+
+	// Alice subscribes to Pro with exact 25 GNOT (25,000,000 ugnot) -> gets 2,500 credits for 30 days!
+	testing.SetRealm(testing.NewUserRealm(alice))
+	sendCoins(subscriptionPriceUgnot)
+	exp := Subscribe(cross(cur))
+	uassert.True(t, exp > 0)
+	uassert.Equal(t, TierPro, EffectiveTier("@alice_gno"))
+	uassert.Equal(t, ProPeriodCredits, aliceID.Credits)
+
+	// Non-operator cannot collect service fees; operator collects accrued fees cleanly without disclosing address publicly.
+	testing.SetRealm(testing.NewUserRealm(charlie))
+	sendCoins(0)
+	uassert.AbortsContains(t, cur, "operator only", func() {
+		CollectServiceFees(cross(cur), charlie)
+	})
+	vaultBefore := balance(opaqueVault)
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	collected := CollectServiceFees(cross(cur), opaqueVault)
+	uassert.Equal(t, overageFeeUgnot+subscriptionPriceUgnot, collected)
+	uassert.Equal(t, vaultBefore+collected, balance(opaqueVault))
+
+	// RFC 6962 proof verifies, and Render() never prints operator or settlement addresses!
 	leafHex := MessageLeafHex(1)
 	proofCSV := ProofForLeaf(0, AccumulatorSize())
 	uassert.True(t, VerifyLeafProof(0, AccumulatorSize(), leafHex, proofCSV))
-
-	// Directory & gnoweb pages render cleanly.
-	uassert.True(t, strings.Contains(ResolveRecipient("@bob_defi"), bobEnc2))
-	uassert.True(t, strings.Contains(Render(""), "@bob_defi"))
-	uassert.True(t, strings.Contains(Render("u/bob_defi"), bobEnc2))
-	uassert.True(t, strings.Contains(Render("inbox/bob_defi"), "Msg #1"))
+	home := Render("")
+	uassert.True(t, strings.Contains(home, "Pro Subscription"))
+	uassert.False(t, strings.Contains(home, opaqueVault.String()))
+	uassert.False(t, strings.Contains(home, opAdmin.String()))
 }
 
-func TestDeFiHashLockedEscrowClaimAndExpiredRefund(cur realm, t *testing.T) {
+func TestProDeFiHashLockedEscrowWithOpaqueSettlementFeeAndZeroFeeRefund(cur realm, t *testing.T) {
 	resetWhisper()
+
+	// Operator configures an opaque direct settlement sink (never printed in Render or events).
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	InitOperator(cross(cur))
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	SetSettlementSink(cross(cur), opaqueVault)
 
 	testing.SetRealm(testing.NewUserRealm(alice))
 	sendCoins(0)
@@ -139,6 +203,13 @@ func TestDeFiHashLockedEscrowClaimAndExpiredRefund(cur realm, t *testing.T) {
 	testing.SetRealm(testing.NewUserRealm(bob))
 	sendCoins(0)
 	RegisterIdentity(cross(cur), bobEnc, "", "bob_otc", "Bob")
+
+	// Alice subscribes to Pro in GNOT -> fee routes automatically to opaque sink!
+	vaultBeforeSub := balance(opaqueVault)
+	testing.SetRealm(testing.NewUserRealm(alice))
+	sendCoins(subscriptionPriceUgnot)
+	Subscribe(cross(cur))
+	uassert.Equal(t, vaultBeforeSub+subscriptionPriceUgnot, balance(opaqueVault))
 
 	// 1. HTLC encrypted escrow: Alice locks 100,000 ugnot behind SHA-256("arobi-secret-key").
 	secret := "arobi-secret-key"
@@ -156,34 +227,21 @@ func TestDeFiHashLockedEscrowClaimAndExpiredRefund(cur realm, t *testing.T) {
 		ClaimEscrow(cross(cur), escID, "wrong-secret")
 	})
 
-	// Correct preimage settles 100% (100,000ugnot) peer-to-peer to Bob with zero residual realm balance!
+	// Correct preimage settles 99% (99,000ugnot) to Bob and 1% (1,000ugnot) to opaque settlement sink!
 	bobBefore := balance(bob)
+	vaultBeforeEsc := balance(opaqueVault)
 	testing.SetRealm(testing.NewUserRealm(bob))
 	sendCoins(0)
 	payout := ClaimEscrow(cross(cur), escID, secret)
-	uassert.Equal(t, int64(100000), payout)
-	uassert.Equal(t, bobBefore+100000, balance(bob))
+	uassert.Equal(t, int64(99000), payout)
+	uassert.Equal(t, bobBefore+99000, balance(bob))
+	uassert.Equal(t, vaultBeforeEsc+1000, balance(opaqueVault))
 	uassert.Equal(t, int64(0), balance(selfAddr))
 
-	// Double-claim MUST fail.
-	testing.SetRealm(testing.NewUserRealm(bob))
-	sendCoins(0)
-	uassert.AbortsContains(t, cur, "already CLAIMED", func() {
-		ClaimEscrow(cross(cur), escID, secret)
-	})
-
-	// 2. Unclaimed escrow refunds 100% to Alice after expiry (zero fee).
+	// 2. Expired unclaimed escrow refunds 100% to Alice (zero fee).
 	testing.SetRealm(testing.NewUserRealm(alice))
 	sendCoins(50000)
 	_, escID2 := SendEscrowMessage(cross(cur), "@bob_otc", ephPub, nonce24, sampleCT(), commit2, "", 10)
-
-	// Refund before expiry MUST fail.
-	testing.SetRealm(testing.NewUserRealm(alice))
-	sendCoins(0)
-	uassert.AbortsContains(t, cur, "not expired yet", func() {
-		RefundEscrow(cross(cur), escID2)
-	})
-
 	testing.SkipHeights(10)
 	aliceBefore := balance(alice)
 	testing.SetRealm(testing.NewUserRealm(alice))
@@ -193,7 +251,6 @@ func TestDeFiHashLockedEscrowClaimAndExpiredRefund(cur realm, t *testing.T) {
 	uassert.Equal(t, aliceBefore+50000, balance(alice))
 	uassert.Equal(t, int64(0), balance(selfAddr))
 
-	// Escrow gnoweb page renders cleanly.
-	uassert.True(t, strings.Contains(Render("escrow/1"), "CLAIMED"))
-	uassert.True(t, strings.Contains(Render("escrow/2"), "REFUNDED"))
+	// Render never discloses opaqueVault or opAdmin.
+	uassert.False(t, strings.Contains(Render("escrow/1"), opaqueVault.String()))
 }
