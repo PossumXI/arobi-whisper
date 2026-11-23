@@ -11,6 +11,9 @@
   > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus on Gno.land — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs.
 - **Tags:** `Go`, `Smart Contracts`, `DeFi`, `Social`, `AI`, `dApps`
 - **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper-gno`
+- **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper-gno/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`
+- **Live Web Playground:** `https://possumxi.github.io/arobi-whisper-gno/web/`
+- **Public Benchmarks (Hugging Face & PageSpeed):** `https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks` · [PageSpeed 100/100/100](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=desktop)
 - **Website:** `https://aura-genesis.org/whisper`
 
 ---

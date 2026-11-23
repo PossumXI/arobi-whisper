@@ -4,6 +4,10 @@
 
 Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web app at [aura-genesis.org/whisper](https://aura-genesis.org/whisper)) for the **Gnome Tavern Hackathon | Gno.land**.
 
+- **1080p Demo Video (2m 11s):** [Watch / Download MP4](https://github.com/PossumXI/arobi-whisper-gno/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4)
+- **Live Adena Browser Playground (100/100/100 PageSpeed):** [possumxi.github.io/arobi-whisper-gno/web/](https://possumxi.github.io/arobi-whisper-gno/web/)
+- **Public Benchmarks on Hugging Face Hub:** [Dataset (JSONL)](https://huggingface.co/datasets/TruLumecreator/immaculate-agent-gno-benchmarks) · [Interactive Space](https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks)
+
 ---
 
 ## Why Whisper on Gno.land?
@@ -78,6 +82,10 @@ Full live measurements against `onyx-1` RPC and `bridge/whisper-agent-bus.mjs` a
 | 256 B (Agent Handoff / Capability Lease) | `0.371 ms` | `0.442 ms` | **1,209 ops/s** | `100%` |
 | 4 KiB (Free Tier Cap) | `0.369 ms` | `0.476 ms` | **1,221 ops/s** | `100%` |
 | 16 KiB (Pro Tier Cap) | `0.397 ms` | `0.500 ms` | **1,104 ops/s** | `100%` |
+
+- **Live Web Playground:** [https://possumxi.github.io/arobi-whisper-gno/web/](https://possumxi.github.io/arobi-whisper-gno/web/)
+- **Google PageSpeed Insights:** [**100 Performance / 100 Best Practices / 100 SEO** (`LCP 0.2s`, `TBT 0ms`, `CLS 0`)](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=desktop)
+- **Hugging Face Hub Benchmarks:** [Public Dataset](https://huggingface.co/datasets/TruLumecreator/immaculate-agent-gno-benchmarks) · [Interactive Space](https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks)
 
 ---
 
