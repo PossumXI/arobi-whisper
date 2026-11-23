@@ -106,4 +106,20 @@ func TestCrossHarnessAgentBusRouteCommitment(t *testing.T) {
 	bad := route
 	bad.Kind = "invalid_kind"
 	uassert.Error(t, bad.Validate())
+
+	// Familiar capability lease & memory sync routes validate 64-hex digests and reject malformed hex.
+	famRoute := route
+	famRoute.Kind = AgentKindCapabilityLease
+	famRoute.CapabilityDigestHex = "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+	famRoute.MemoryRecallDigestHex = "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+	uassert.NoError(t, famRoute.Validate())
+	uassert.Equal(t, 64, len(assurance.Hex(famRoute.LeafHash())))
+
+	memRoute := famRoute
+	memRoute.Kind = AgentKindMemorySync
+	uassert.NoError(t, memRoute.Validate())
+
+	badCap := famRoute
+	badCap.CapabilityDigestHex = "not-64-hex"
+	uassert.Error(t, badCap.Validate())
 }

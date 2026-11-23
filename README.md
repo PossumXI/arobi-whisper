@@ -26,8 +26,10 @@ Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web a
 | `gno.land/p/arobi/whisper` | Pure Gno package: wire-compatible envelope & escrow types, `AgentBusRoute` + `BindAgentEnvelopeCommitment` (`agentbus.gno`), strict X25519/nonce/canonical-Base64/handle validators, RFC 6962 leaf hashing (imports `gno.land/p/arobi/assurance`). |
 | `gno.land/r/arobi/whisper` | Stateful Gno.land realm: on-chain key directory, claim-once `@handles`, key rotation, Free/Pro GNOT subscriptions (`Subscribe`), GNOT overage & 1% escrow settlement fees with private opaque operator settlement, anti-spam inbox policies, direct GNOT tip messaging, HTLC/expiry DeFi escrows, RFC 6962 proofs, and `gnoweb` `Render(path)` UI. |
 | `bridge/whisper-agent-bus.mjs` | Zero-dependency Node.js CLI & SDK (`keygen`, `seal`, `open`, `buildAgentWhisperTx`) for cross-shell / cross-environment / cross-harness (`Ullumii`, `gnosh.ai`, Docker, WSL) encrypted agent communication over Whisper. |
-| `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SendMessage`, `CreateEscrow`, `ClaimEscrow`, `RefundEscrow`) + Gno.land `abci_query` adapter. |
-| `web/index.html` | Interactive browser E2EE + DeFi Escrow & Adena Wallet playground. |
+| `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + Gno.land `abci_query` adapter. |
+| `web/index.html` | Interactive 4-tab browser playground: X25519 Identity & 25 GNOT Pro Subscribe, E2EE Chat & HTLC Escrows, Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`), and Live `onyx-1` RPC Inspector. |
+| `BENCHMARKS.md` | Live public crypto throughput (`1,104–1,221 ops/s` X25519 + ChaCha20-Poly1305) and real `onyx-1` RPC / gas measurements. |
+| `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`, `@JonDevOps`, `@canderson777`) and compliant Gnome Tavern submission guide. |
 
 ---
 
@@ -64,6 +66,18 @@ Tests run against real Gno v1.8.0 (`gno test -v`) and Node.js covering:
 - HTLC hash-locked encrypted DeFi escrow claim (`1%` protocol settlement fee in GNOT, `99%` to recipient), double-claim rejection, and `100%` (`0%` fee) sender refund after expiry
 - Cross-shell / cross-harness `AgentBusRoute` validation, cryptographic commitment binding, and end-to-end X25519 + ChaCha20-Poly1305 seal/open round-trip (`Ullumii` ↔ `gnosh.ai`)
 - On-chain RFC 6962 Merkle inclusion proof verification
+
+---
+
+## Live Public Benchmarks
+
+Full live measurements against `onyx-1` RPC and `bridge/whisper-agent-bus.mjs` are published in [BENCHMARKS.md](BENCHMARKS.md):
+
+| Payload Tier (200 real X25519 + ChaCha20-Poly1305 round-trips) | Seal p50 | Open p50 | Throughput | Verified |
+| --- | ---: | ---: | ---: | ---: |
+| 256 B (Agent Handoff / Capability Lease) | `0.371 ms` | `0.442 ms` | **1,209 ops/s** | `100%` |
+| 4 KiB (Free Tier Cap) | `0.369 ms` | `0.476 ms` | **1,221 ops/s** | `100%` |
+| 16 KiB (Pro Tier Cap) | `0.397 ms` | `0.500 ms` | **1,104 ops/s** | `100%` |
 
 ---
 

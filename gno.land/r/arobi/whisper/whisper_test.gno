@@ -251,6 +251,34 @@ func TestProDeFiHashLockedEscrowWithOpaqueSettlementFeeAndZeroFeeRefund(cur real
 	uassert.Equal(t, aliceBefore+50000, balance(alice))
 	uassert.Equal(t, int64(0), balance(selfAddr))
 
-	// Render never discloses opaqueVault or opAdmin.
+	// Render never discloses opaqueVault or opAdmin; user/inbox/query getters all work cleanly.
 	uassert.False(t, strings.Contains(Render("escrow/1"), opaqueVault.String()))
+	uassert.True(t, strings.Contains(Render("u/@alice_otc"), "alice_otc"))
+	uassert.True(t, strings.Contains(Render("inbox/@bob_otc"), bob.String()))
+	uassert.True(t, strings.HasPrefix(ResolveRecipient("@bob_otc"), bob.String()+"|"))
+	uassert.Equal(t, uint64(2), MessageCount())
+	uassert.Equal(t, uint64(2), EscrowCount())
+	uassert.Equal(t, 64, len(Root()))
+
+	// Operator pricing governance (rejects excessive >10% escrow fee) + TransferOperator.
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	uassert.AbortsContains(t, cur, "escrowFeeBps", func() {
+		SetPricing(cross(cur), 25000000, 10000, 1500)
+	})
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	SetPricing(cross(cur), 20000000, 5000, 50)
+	uassert.Equal(t, int64(20000000), SubscriptionPriceUgnot())
+	uassert.Equal(t, int64(5000), OverageFeeUgnot())
+	uassert.Equal(t, int64(50), EscrowFeeBps())
+
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	TransferOperator(cross(cur), alice)
+	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	sendCoins(0)
+	uassert.AbortsContains(t, cur, "operator only", func() {
+		SetPricing(cross(cur), 25000000, 10000, 100)
+	})
 }
