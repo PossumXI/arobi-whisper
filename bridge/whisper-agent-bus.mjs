@@ -3,7 +3,7 @@
  * Arobi Whisper Cross-Shell / Cross-Environment / Cross-Harness Agent Communication Utility.
  *
  * Enables autonomous agents running across separate shells (bash, pwsh, zsh), containers
- * (Docker, WSL, cloud workers), or harnesses (Ullumii, gnosh.ai, MCP servers, Gno realms)
+ * (Docker, WSL, cloud workers), or harnesses (Ullumii, gnosh.ai, MCP servers, realms)
  * to exchange end-to-end encrypted, warrant-bound tasks, evidence receipts, and halt signals
  * over Whisper's sealed-box format and `gno.land/r/arobi/whisper`.
  *

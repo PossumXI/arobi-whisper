@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Deploy Arobi Whisper on Gno.land package & realm to Gno.land Onyx Testnet (onyx-1).
+# Deploy the Arobi Whisper package and realm to the Onyx testnet (onyx-1).
 #
 # Prerequisite: Deploy gno.land/p/<namespace>/signals and gno.land/p/<namespace>/assurance
-# first using gno-immaculate-sdk-agent-builder/scripts/deploy-onyx.sh (or set ASSURANCE_NAMESPACE).
+# first using immaculate-sdk-agent-builder/scripts/deploy-onyx.sh (or set ASSURANCE_NAMESPACE).
 #
 # Usage:
 #   GNOKEY_BIN=gnokey bash scripts/deploy-onyx.sh <testnet-key-name> [namespace]
@@ -64,7 +64,7 @@ deploy_pkg p
 deploy_pkg r
 
 echo ""
-echo "=== Deployed Arobi Whisper on Gno.land to Onyx ($CHAIN_ID) ==="
+echo "=== Deployed Arobi Whisper to Onyx ($CHAIN_ID) ==="
 echo "Explorer: https://onyx.testnets.gno.land/r/${NAMESPACE}/whisper"
 echo ""
 echo "Next (private operator initialization — never commit payout addresses):"

@@ -1,6 +1,6 @@
-# Gnome Tavern Hackathon Submission Pack — **Arobi Whisper**
+# Hackathon Submission Pack — **Arobi Whisper**
 
-*(100% compliant with official Gnome Tavern Hackathon | Gno.land rules: no `"Gno"` prefix in Build Name, public MIT repository, genuine Gno package + stateful realm submitted on `onyx-1`, zero private wallet/proprietary disclosures.)*
+*(Build name is **Arobi Whisper**. Public MIT repository. Package and stateful realm submitted on `onyx-1`. No private wallet or proprietary disclosures.)*
 
 ---
 
@@ -8,11 +8,11 @@
 
 - **Name of your Build:** `Arobi Whisper`
 - **Brief description of this Build:**
-  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus on Gno.land — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs.
+  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs.
 - **Tags:** `Go`, `Smart Contracts`, `DeFi`, `Social`, `AI`, `dApps`
-- **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper-gno`
-- **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper-gno/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`
-- **Live Web Playground:** `https://possumxi.github.io/arobi-whisper-gno/web/`
+- **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper`
+- **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`
+- **Live Web Playground:** `https://possumxi.github.io/arobi-whisper/web/`
 - **Public Benchmarks (Hugging Face & PageSpeed):** `https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks` · [PageSpeed 100/100/100](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=desktop)
 - **Website:** `https://aura-genesis.org/whisper`
 
@@ -27,7 +27,7 @@
   `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`
   *(Pure package: `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`, importing `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/assurance`)*
 - **Is this a new project, or one started before Gnome Tavern?**
-  > Arobi Whisper exists as a live web E2EE messenger (`aura-genesis.org/whisper`). During Gnome Tavern, we built a brand-new native **Gno.land smart-contract architecture** (`p/arobi/whisper` + `r/arobi/whisper`) from scratch with on-chain X25519 keycards, claim-once `@handles`, GNOT Free/Pro subscription metering (`25 GNOT`/30d), HTLC DeFi escrows (`1%` claim fee / `0%` expired refund), RFC 6962 inclusion proofs, a **Cross-Shell / Cross-Harness Encrypted Agent Bus** (`agentbus.gno` + `bridge/whisper-agent-bus.mjs` connecting `Ullumii`, `gnosh.ai`, and local shells), and an Adena Wallet browser playground (`web/index.html`).
+  > Arobi Whisper exists as a live web E2EE messenger (`aura-genesis.org/whisper`). During Gnome Tavern, we built a brand-new smart-contract architecture (`p/arobi/whisper` + `r/arobi/whisper`) from scratch with on-chain X25519 keycards, claim-once `@handles`, GNOT Free/Pro subscription metering (`25 GNOT`/30d), HTLC DeFi escrows (`1%` claim fee / `0%` expired refund), RFC 6962 inclusion proofs, a **Cross-Shell / Cross-Harness Encrypted Agent Bus** (`agentbus.gno` + `bridge/whisper-agent-bus.mjs` connecting `Ullumii`, `gnosh.ai`, and local shells), and an Adena Wallet browser playground (`web/index.html`).
 - **On-Chain Onyx (`onyx-1`) Proof Table (for `#gnome-tavern-hackathon` `enablepkg` activation):**
   | Package / Realm | Block | Gas Used | Tx Hash |
   | --- | ---: | ---: | --- |
@@ -40,7 +40,7 @@
 
 | Criterion (Weight) | What Judges Can Verify Immediately |
 | --- | --- |
-| **Technical Quality (40%)** | Pure Gno `p/arobi/whisper` + stateful `r/arobi/whisper`, `gno lint` = 0, 5/5 real Gno v1.8.0 tests + 2 Node test suites, green Ubuntu CI, verified on-chain `onyx-1` submissions (`17.98M` + `45.41M` gas). |
+| **Technical Quality (40%)** | Package `p/arobi/whisper` + stateful realm `r/arobi/whisper`, `gno test` 5/5 + 2 Node test suites, green Ubuntu CI, verified on-chain `onyx-1` submissions (`17.98M` + `45.41M` gas). |
 | **User Appeal (20%)** | Interactive 4-tab Adena browser playground (`web/index.html`) + `gnoweb` explorer (`Render("u/...")`, `Render("inbox/...")`), mirroring live `aura-genesis.org/whisper` Free/Pro GNOT UX. |
 | **Creativity (20%)** | Zero-server E2EE DeFi messenger + HTLC hash-locked encrypted escrows (`1%` claim fee / `0%` expired refund) + Cross-Shell / Cross-Harness Encrypted Agent Bus (`Ullumii` ↔ `gnosh.ai`, `1,104–1,221 ops/s` measured in `BENCHMARKS.md`). |
 | **Docs & Demo (20%)** | Complete `README.md`, `BENCHMARKS.md`, `CONTRIBUTORS.md`, reproducible CLI commands, and 2–3 min demo walkthrough. |
@@ -48,7 +48,7 @@
 ---
 
 ## 2–3 Minute Demo Video Shot List (for `@canderson777`)
-1. **0:00–0:30 (Overview):** Zero-server E2EE DeFi chat + Familiar Agent Bus natively on Gno.land (plaintext never touches chain state).
+1. **0:00–0:30 (Overview):** Zero-server E2EE DeFi chat + Familiar Agent Bus (plaintext never touches chain state).
 2. **0:30–1:15 (Interactive Web Playground `web/index.html`):** Generate X25519 keypair in browser, build `RegisterIdentity` + **Pro Subscribe (`25 GNOT`)**, seal an encrypted HTLC escrow message (`SendEscrowMessage` + `ClaimEscrow` + `RefundEscrow`), and show zero plaintext in the `/vm.m_call` payload.
 3. **1:15–2:00 (Cross-Harness Encrypted Agent Bus):** Seal an `Ullumii → gnosh.ai` `capability_lease` / `handoff` packet via `bridge/whisper-agent-bus.mjs` and show tamper rejection + real measured throughput (`1,104–1,221 ops/s` in `BENCHMARKS.md`).
-4. **2:00–2:30 (Real Gno v1.8.0 Tests & Onyx-1 Proof):** Run `bash scripts/run-gno-tests.sh` and click **Query Live Onyx-1** in `web/index.html` to verify live on-chain block height & package submissions.
+4. **2:00–2:30 (`gno test` & Onyx-1 Proof):** Run `bash scripts/run-gno-tests.sh` and click **Query Live Onyx-1** in `web/index.html` to verify live on-chain block height & package submissions.

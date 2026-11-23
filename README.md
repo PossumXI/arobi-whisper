@@ -1,25 +1,67 @@
-# Arobi Whisper on Gno.land
+# Arobi Whisper
 
-**End-to-end encrypted DeFi messenger natively on Gno.land — client-sealed `X25519 + XChaCha20-Poly1305` chat paired with GNOT tipping, HTLC/expiry DeFi escrows, programmable anti-spam inbox rules, and RFC 6962 cryptographic evidence proofs.**
+**End-to-end encrypted DeFi messenger — client-sealed `X25519 + XChaCha20-Poly1305` chat paired with GNOT tipping, HTLC/expiry DeFi escrows, programmable anti-spam inbox rules, and RFC 6962 cryptographic evidence proofs.**
 
-Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web app at [aura-genesis.org/whisper](https://aura-genesis.org/whisper)) for the **Gnome Tavern Hackathon | Gno.land**.
+Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web app at [aura-genesis.org/whisper](https://aura-genesis.org/whisper)) for the **Gnome Tavern hackathon**.
 
-- **1080p Demo Video (2m 11s):** [Watch / Download MP4](https://github.com/PossumXI/arobi-whisper-gno/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4)
-- **Live Adena Browser Playground (100/100/100 PageSpeed):** [possumxi.github.io/arobi-whisper-gno/web/](https://possumxi.github.io/arobi-whisper-gno/web/)
+- **1080p Demo Video (2m 11s):** [Watch / Download MP4](https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4)
+- **Live Adena Browser Playground (100/100/100 PageSpeed):** [possumxi.github.io/arobi-whisper/web/](https://possumxi.github.io/arobi-whisper/web/)
 - **Public Benchmarks on Hugging Face Hub:** [Dataset (JSONL)](https://huggingface.co/datasets/TruLumecreator/immaculate-agent-gno-benchmarks) · [Interactive Space](https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks)
 
 ---
 
-## Why Whisper on Gno.land?
+## Run it locally in 5 minutes
 
-- **Zero Centralized Server / Zero TOFU:** Your X25519 encryption public key and claim-once `@handle` bind directly to your native Gno `g1...` address via `cur.Previous().Address()`.
+Same steps as the [quick start](https://docs.gno.land/builders/quickstart): install the toolchain, run the tests, boot `gnodev`, open the realm.
+
+```sh
+# 1. Install gno, gnokey, and gnodev from github.com/gnolang/gno master.
+#    Needs Go 1.25+, git, and make. The quick start installer without
+#    --from-source installs the latest release instead of master.
+curl -fsSL https://raw.githubusercontent.com/gnolang/gno/master/misc/install.sh | sh -s -- --from-source
+export PATH="$HOME/.gno/bin:$PATH"
+
+# 2. Clone this repo and the signals/assurance dependency as siblings.
+mkdir -p "$HOME/src" && cd "$HOME/src"
+git clone https://github.com/PossumXI/arobi-whisper.git
+git clone https://github.com/PossumXI/immaculate-sdk-agent-builder.git
+
+# 3. One empty workspace file. Current gno resolves every gnomod.toml under it.
+#    `gno test` does not load packages from a second repo unless they sit in
+#    that workspace. Each package here already has the gnomod.toml that
+#    `gno mod init` writes (module path plus gno = "0.9").
+touch gnowork.toml
+
+# 4. Test the package and the realm.
+cd arobi-whisper
+gno test ./gno.land/p/arobi/whisper ./gno.land/r/arobi/whisper
+
+# 5. Boot a local chain from the realm directory. The parent gnowork.toml
+#    loads this realm together with gno.land/p/arobi/whisper, signals, and assurance.
+cd gno.land/r/arobi/whisper
+gnodev .
+# Open http://localhost:8888  (redirects to /r/arobi/whisper)
+
+# 6. Key for a testnet deploy. Fund the g1 address at the faucet.
+#    Do not commit the mnemonic gnokey prints.
+gnokey list
+gnokey add dev
+```
+
+Deploy commands are in [Deploying to Gno.land Onyx Testnet (`onyx-1`)](#deploying-to-gnoland-onyx-testnet-onyx-1) below.
+
+---
+
+## Why Arobi Whisper?
+
+- **Zero Centralized Server / Zero TOFU:** Your X25519 encryption public key and claim-once `@handle` bind directly to your native `g1...` address via `cur.Previous().Address()`.
 - **True End-to-End Encryption:** Every message is sealed client-side with an ephemeral X25519 key + `HKDF-SHA256` (`arobi-whisper-x25519-xchacha-v1`) + `XChaCha20-Poly1305` (24-byte nonce). Only ciphertext, ephemeral public key, nonce, and `SHA-256` commitment ever touch Gno.land state.
 - **Tiered GNOT Subscriptions & Service Fees (mirroring live `aura-genesis.org/whisper`):**
   - **Free Tier:** `110` credits, `4 KiB` max ciphertext, standard E2EE messaging.
   - **Pro Subscription (`Subscribe` in GNOT — default `25 GNOT` / 30 days):** `2,500` credits per 30-day period, `16 KiB` encrypted envelopes, and DeFi HTLC escrow creation.
   - **Pay-Per-Message Overage & Escrow Settlement Fees in GNOT:** Optional `0.01 GNOT` overage fee when credits reach `0`, plus a `1%` (`100 bps`) protocol settlement fee on claimed DeFi escrows (`0%` fee on expired refunds; `100%` of direct user tips forward straight to recipients). Operator settlement routing is configured privately at deployment time and never hardcoded or publicly disclosed.
 - **Built-In Arobi Assurance Evidence:** Directly imports `gno.land/p/arobi/assurance` so every delivered ciphertext envelope and DeFi escrow state transition is appended to an on-chain **RFC 6962 / RFC 9162 Merkle Accumulator** with independently verifiable inclusion proofs (`ProofForLeaf` / `VerifyLeafProof`).
-- **Cross-Shell / Cross-Environment / Cross-Harness Encrypted Agent Bus (`agentbus.gno` + `bridge/whisper-agent-bus.mjs`):** Whisper is a standalone E2EE DeFi messenger, and also ships a dedicated **Agent Bus utility** so autonomous agents running across different shells (`bash`, `pwsh`), environments (containers, WSL, cloud runners), and harnesses (**`Ullumii`**, **`gnosh.ai`**, Gno realms) can exchange X25519 + ChaCha20-Poly1305 encrypted handoffs, delegated warrants, and RFC 6962 evidence digests directly over Whisper without sharing local pipes or centralized message brokers.
+- **Cross-Shell / Cross-Environment / Cross-Harness Encrypted Agent Bus (`agentbus.gno` + `bridge/whisper-agent-bus.mjs`):** Whisper is a standalone E2EE DeFi messenger, and also ships a dedicated **Agent Bus utility** so autonomous agents running across different shells (`bash`, `pwsh`), environments (containers, WSL, cloud runners), and harnesses (**`Ullumii`**, **`gnosh.ai`**, realms) can exchange X25519 + ChaCha20-Poly1305 encrypted handoffs, delegated warrants, and RFC 6962 evidence digests directly over Whisper without sharing local pipes or centralized message brokers.
 
 ---
 
@@ -27,10 +69,10 @@ Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web a
 
 | Path | Description |
 | --- | --- |
-| `gno.land/p/arobi/whisper` | Pure Gno package: wire-compatible envelope & escrow types, `AgentBusRoute` + `BindAgentEnvelopeCommitment` (`agentbus.gno`), strict X25519/nonce/canonical-Base64/handle validators, RFC 6962 leaf hashing (imports `gno.land/p/arobi/assurance`). |
-| `gno.land/r/arobi/whisper` | Stateful Gno.land realm: on-chain key directory, claim-once `@handles`, key rotation, Free/Pro GNOT subscriptions (`Subscribe`), GNOT overage & 1% escrow settlement fees with private opaque operator settlement, anti-spam inbox policies, direct GNOT tip messaging, HTLC/expiry DeFi escrows, RFC 6962 proofs, and `gnoweb` `Render(path)` UI. |
+| `gno.land/p/arobi/whisper` | Pure package: wire-compatible envelope & escrow types, `AgentBusRoute` + `BindAgentEnvelopeCommitment` (`agentbus.gno`), strict X25519/nonce/canonical-Base64/handle validators, RFC 6962 leaf hashing (imports `gno.land/p/arobi/assurance`). |
+| `gno.land/r/arobi/whisper` | Stateful realm: on-chain key directory, claim-once `@handles`, key rotation, Free/Pro GNOT subscriptions (`Subscribe`), GNOT overage & 1% escrow settlement fees with private opaque operator settlement, anti-spam inbox policies, direct GNOT tip messaging, HTLC/expiry DeFi escrows, RFC 6962 proofs, and `gnoweb` `Render(path)` UI. |
 | `bridge/whisper-agent-bus.mjs` | Zero-dependency Node.js CLI & SDK (`keygen`, `seal`, `open`, `buildAgentWhisperTx`) for cross-shell / cross-environment / cross-harness (`Ullumii`, `gnosh.ai`, Docker, WSL) encrypted agent communication over Whisper. |
-| `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + Gno.land `abci_query` adapter. |
+| `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + `abci_query` adapter. |
 | `web/index.html` | Interactive 4-tab browser playground: X25519 Identity & 25 GNOT Pro Subscribe, E2EE Chat & HTLC Escrows, Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`), and Live `onyx-1` RPC Inspector. |
 | `BENCHMARKS.md` | Live public crypto throughput (`1,104–1,221 ops/s` X25519 + ChaCha20-Poly1305) and real `onyx-1` RPC / gas measurements. |
 | `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`, `@JonDevOps`, `@canderson777`) and compliant Gnome Tavern submission guide. |
@@ -39,7 +81,7 @@ Built by [Arobi Technology Alliance, Inc.](https://aura-genesis.org) (live web a
 
 ## Cross-Shell / Cross-Harness Agent Bus Utility
 
-Agents operating across isolated shells, containers, or harnesses (`Ullumii` ↔ `gnosh.ai` ↔ Gno realm) can seal and unseal authenticated handoff envelopes locally and relay only encrypted commitments across Gno.land:
+Agents operating across isolated shells, containers, or harnesses (`Ullumii` ↔ `gnosh.ai` ↔ realm) can seal and unseal authenticated handoff envelopes locally and relay only encrypted commitments on chain:
 
 ```bash
 # 1. Generate X25519 agent bus keypairs on each host / container / harness
@@ -61,7 +103,7 @@ bash scripts/run-gno-tests.sh
 node --test web/adena-whisper.test.mjs bridge/whisper-agent-bus.test.mjs
 ```
 
-Tests run against real Gno v1.8.0 (`gno test -v`) and Node.js covering:
+`scripts/run-gno-tests.sh` runs `gno test` on the current toolchain (a parent `gnowork.toml` when this repo sits next to `immaculate-sdk-agent-builder`, otherwise a temporary workspace). Node tests cover the wallet adapter and the agent bus. Together they check:
 - Handle normalization & reserved-name protection (`@arobi`, `@ullumii`, duplicates)
 - X25519 key, 24-byte nonce, and canonical AEAD Base64 ciphertext validation
 - Free (`110` credits, `4 KiB`) vs Pro (`25 GNOT` / 30 days, `2,500` credits, `16 KiB`, DeFi escrows) metering, `0.01 GNOT` overage billing, and private opaque operator fee settlement (`InitOperator` / `SetSettlementSink` / `CollectServiceFees` with zero wallet address disclosure)
@@ -83,7 +125,7 @@ Full live measurements against `onyx-1` RPC and `bridge/whisper-agent-bus.mjs` a
 | 4 KiB (Free Tier Cap) | `0.369 ms` | `0.476 ms` | **1,221 ops/s** | `100%` |
 | 16 KiB (Pro Tier Cap) | `0.397 ms` | `0.500 ms` | **1,104 ops/s** | `100%` |
 
-- **Live Web Playground:** [https://possumxi.github.io/arobi-whisper-gno/web/](https://possumxi.github.io/arobi-whisper-gno/web/)
+- **Live Web Playground:** [https://possumxi.github.io/arobi-whisper/web/](https://possumxi.github.io/arobi-whisper/web/)
 - **Google PageSpeed Insights:** [**100 Performance / 100 Best Practices / 100 SEO** (`LCP 0.2s`, `TBT 0ms`, `CLS 0`)](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=desktop)
 - **Hugging Face Hub Benchmarks:** [Public Dataset](https://huggingface.co/datasets/TruLumecreator/immaculate-agent-gno-benchmarks) · [Interactive Space](https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks)
 
@@ -105,12 +147,12 @@ Submitted on-chain to `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`; curren
 ## Deploying to Gno.land Onyx Testnet (`onyx-1`)
 
 ```bash
-# 1. Deploy dependency packages (from gno-immaculate-sdk-agent-builder)
-gnokey maketx addpkg --pkgpath gno.land/p/<your-namespace>/signals --pkgdir ../gno-immaculate-sdk-agent-builder/gno.land/p/arobi/signals \
+# 1. Deploy dependency packages (from immaculate-sdk-agent-builder)
+gnokey maketx addpkg --pkgpath gno.land/p/<your-namespace>/signals --pkgdir ../immaculate-sdk-agent-builder/gno.land/p/arobi/signals \
   -remote https://rpc.onyx.testnets.gno.land:443 -chainid onyx-1 \
   --gas-fee 1000000ugnot --gas-wanted 10000000 --broadcast <your-testnet-key>
 
-gnokey maketx addpkg --pkgpath gno.land/p/<your-namespace>/assurance --pkgdir ../gno-immaculate-sdk-agent-builder/gno.land/p/arobi/assurance \
+gnokey maketx addpkg --pkgpath gno.land/p/<your-namespace>/assurance --pkgdir ../immaculate-sdk-agent-builder/gno.land/p/arobi/assurance \
   -remote https://rpc.onyx.testnets.gno.land:443 -chainid onyx-1 \
   --gas-fee 1000000ugnot --gas-wanted 10000000 --broadcast <your-testnet-key>
 

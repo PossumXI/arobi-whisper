@@ -1,6 +1,6 @@
 # Live Public Benchmarks — Arobi Whisper
 
-**Measured:** `2026-11-23T05:31:21Z` | **Reproduce:** `node experiments/run_live_benchmarks.mjs` (in companion repo [`gno-immaculate-sdk-agent-builder`](https://github.com/PossumXI/gno-immaculate-sdk-agent-builder))
+**Measured:** `2026-11-23T05:31:21Z` | **Reproduce:** `node experiments/run_live_benchmarks.mjs` (in companion repo [`immaculate-sdk-agent-builder`](https://github.com/PossumXI/immaculate-sdk-agent-builder))
 
 All measurements below were captured against **real running systems**: live Gno.land Onyx Testnet (`onyx-1`) RPC (`https://rpc.onyx.testnets.gno.land:443`) and real Node.js `node:crypto` X25519 + HKDF-SHA256 + ChaCha20-Poly1305 authenticated encryption across `bridge/whisper-agent-bus.mjs`.
 
@@ -37,8 +37,7 @@ All measurements below were captured against **real running systems**: live Gno.
 
 | Suite | Command | Result |
 | --- | --- | --- |
-| Real Gno v1.8.0 Lint (`p/arobi/whisper`, `r/arobi/whisper`) | `bash scripts/run-gno-tests.sh` | **0 warnings / 0 errors** |
-| Real Gno v1.8.0 Unit Tests (handles, X25519/nonce/Base64, Free/Pro 25 GNOT billing, opaque settlement, HTLC 1%/0%, `AgentBusRoute` capability leases & memory sync, `Render()`, RFC 6962 proofs) | `bash scripts/run-gno-tests.sh` | **5/5 PASS** |
+| `gno test` (`p/arobi/whisper`, `r/arobi/whisper`: handles, X25519/nonce/Base64, Free/Pro 25 GNOT billing, opaque settlement, HTLC 1%/0%, `AgentBusRoute` capability leases & memory sync, `Render()`, RFC 6962 proofs) | `bash scripts/run-gno-tests.sh` | **5/5 PASS** |
 | Adena Wallet Tx Builders & `abci_query` Adapter | `node --test web/adena-whisper.test.mjs` | **PASS** |
 | Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`, tamper rejection) | `node --test bridge/whisper-agent-bus.test.mjs` | **PASS** |
 
@@ -46,6 +45,6 @@ All measurements below were captured against **real running systems**: live Gno.
 
 ## 4. Public Third-Party Benchmarks (Google PageSpeed Insights & Hugging Face Hub)
 
-- **Live GitHub Pages Playground:** [https://possumxi.github.io/arobi-whisper-gno/web/](https://possumxi.github.io/arobi-whisper-gno/web/)
+- **Live GitHub Pages Playground:** [https://possumxi.github.io/arobi-whisper/web/](https://possumxi.github.io/arobi-whisper/web/)
 - **Google PageSpeed Insights (Desktop & Mobile):** **Performance `100`**, **Best Practices `100`**, **SEO `100`**, Accessibility `78` (`LCP 0.2s` desktop / `0.8s` mobile, `TBT 0 ms`, `CLS 0`) — [Verify Public Desktop Report](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=desktop) · [Verify Public Mobile Report](https://pagespeed.web.dev/analysis/https-possumxi-github-io-arobi-whisper-gno-web/q338wevmo1?form_factor=mobile)
 - **Hugging Face Hub Public Benchmark Dataset & Interactive Space:** [Dataset (JSONL)](https://huggingface.co/datasets/TruLumecreator/immaculate-agent-gno-benchmarks) · [Interactive Space](https://huggingface.co/spaces/TruLumecreator/immaculate-agent-gno-benchmarks)

@@ -1,4 +1,4 @@
-// Arobi Whisper on Gno.land — Adena Wallet + RPC Adapter & Wire-Compatible E2EE Helper.
+// Arobi Whisper — Adena Wallet + RPC Adapter & Wire-Compatible E2EE Helper.
 //
 // Connects client-side Arobi Whisper v1 sealed-box encryption (X25519 + HKDF-SHA256 +
 // XChaCha20-Poly1305) directly to gno.land/r/arobi/whisper via Adena wallet (window.adena)
@@ -80,9 +80,9 @@ export function buildRefundEscrowTx(caller, { escrowId }, pkgPath = WHISPER_REAL
 /** Execute a built Whisper tx through the browser's Adena wallet extension. */
 export async function broadcastWithAdena(tx) {
   if (typeof window === 'undefined' || !window.adena) {
-    throw new Error('Adena wallet extension not detected. Install Adena (https://adena.app) to broadcast to Gno.land.');
+    throw new Error('Adena wallet extension not detected. Install Adena (https://adena.app) to broadcast the transaction.');
   }
-  await window.adena.AddEstablish('Arobi Whisper on Gno.land');
+  await window.adena.AddEstablish('Arobi Whisper');
   return await window.adena.DoContract(tx);
 }
 
