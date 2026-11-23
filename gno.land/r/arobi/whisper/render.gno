@@ -7,7 +7,7 @@ import (
 	"gno.land/p/arobi/assurance"
 )
 
-// Render serves the gnoweb explorer for Arobi Whisper on Gno.land.
+// Render serves the gnoweb explorer for Arobi Whisper.
 //
 // Routes:
 //   /                      Directory, global RFC 6962 commitment root, escrow stats
@@ -33,7 +33,7 @@ func Render(path string) string {
 
 func renderHome() string {
 	var b strings.Builder
-	b.WriteString("# Arobi Whisper — End-to-End Encrypted DeFi Chat on Gno.land\n\n")
+	b.WriteString("# Arobi Whisper — End-to-End Encrypted DeFi Chat\n\n")
 	b.WriteString("Client-side `X25519 + HKDF-SHA256 + XChaCha20-Poly1305` sealed boxes paired with native GNOT ")
 	b.WriteString("tipping, hash-locked DeFi escrows, programmable anti-spam inbox policies, and RFC 6962 ")
 	b.WriteString("evidence proofs powered by `gno.land/p/arobi/assurance`. Plaintext never touches chain state.\n\n")

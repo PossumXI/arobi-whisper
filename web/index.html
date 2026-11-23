@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="description" content="Arobi Whisper on Gno.land — client-sealed X25519 + ChaCha20-Poly1305 E2EE DeFi messenger, Free/Pro GNOT subscriptions, HTLC escrows, Cross-Harness Agent Bus, and live Onyx-1 RPC inspector." />
+  <meta name="description" content="Arobi Whisper — client-sealed X25519 + ChaCha20-Poly1305 E2EE DeFi messenger, Free/Pro GNOT subscriptions, HTLC escrows, Cross-Harness Agent Bus, and live Onyx-1 RPC inspector." />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%2315151f'/%3E%3Crect x='6' y='22' width='5' height='3' fill='%23ff2d95'/%3E%3Crect x='11' y='22' width='5' height='3' fill='%23ffe34d'/%3E%3Crect x='16' y='22' width='5' height='3' fill='%232de2ff'/%3E%3Crect x='21' y='22' width='5' height='3' fill='%235cff7a'/%3E%3Ccircle cx='16' cy='13' r='5' fill='none' stroke='%23f4f4fb' stroke-width='2.4'/%3E%3C/svg%3E" />
   <title>Arobi Whisper — E2EE DeFi Messenger &amp; Cross-Harness Agent Bus</title>
   <style>
@@ -99,11 +99,11 @@
 <body>
 <main>
   <header class="vhs">
-    <div class="osd" aria-hidden="true"><span class="play">&#9654; Play</span><span>CH 02 &middot; Gno.land onyx-1 &middot; Whisper</span><span class="rec">Rec</span></div>
+    <div class="osd" aria-hidden="true"><span class="play">&#9654; Play</span><span>CH 02 &middot; onyx-1 &middot; Whisper</span><span class="rec">Rec</span></div>
     <h1>Arobi <span class="spectrum">Whisper</span></h1>
-    <p class="sub">Client-sealed end-to-end encrypted DeFi messenger &amp; cross-harness Familiar Agent Bus on Gno.land. Plaintext never touches chain state, and payout routing is never publicly disclosed.</p>
+    <p class="sub">Client-sealed end-to-end encrypted DeFi messenger &amp; cross-harness Familiar Agent Bus. Plaintext never touches chain state, and payout routing is never publicly disclosed.</p>
     <div class="badges">
-    <span class="badge">Gno.land Realm (Onyx onyx-1)</span>
+    <span class="badge">Onyx testnet realm</span>
     <span class="badge">X25519 + ChaCha20/AEAD</span>
     <span class="badge">Free / Pro GNOT Subscriptions</span>
     <span class="badge">HTLC DeFi Escrow</span>
@@ -127,7 +127,7 @@
         <h2>Wallet, Keys &amp; Claim-Once @Handle</h2>
         <label>Whisper Realm Path</label>
         <input id="realmPath" value="gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper" />
-        <label>Caller Gno Address (Adena or Demo)</label>
+        <label>Caller address (g1)</label>
         <input id="callerAddr" value="g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t" />
         <label>Handle (claim-once)</label>
         <input id="handle" value="alice_whisper" />
@@ -220,7 +220,7 @@
   <!-- TAB 4 -->
   <section id="tab-onyx" class="panel">
     <div class="card">
-      <h2>Live Gno.land Onyx Testnet (<code>onyx-1</code>) On-Chain Proof</h2>
+      <h2>Live Onyx Testnet (<code>onyx-1</code>) On-Chain Proof</h2>
       <label>Onyx JSON-RPC Endpoint</label>
       <input id="rpcUrl" value="https://rpc.onyx.testnets.gno.land:443" />
       <button id="btnQueryOnyx" class="action">Query Live Onyx-1 Block Height &amp; Deployed Packages</button>

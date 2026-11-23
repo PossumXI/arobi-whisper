@@ -1,5 +1,5 @@
 // Package whisper defines the canonical E2E-encrypted envelope, handle validation,
-// and DeFi escrow evidence primitives for Arobi Whisper on Gno.land.
+// and DeFi escrow evidence primitives for Arobi Whisper.
 //
 // Wire-compatible with live Arobi Whisper (aura-genesis.org/whisper):
 //   - Client generates local X25519 (encryption) + Ed25519 (optional signing) keypairs.
