@@ -32,7 +32,7 @@ export function createTaskHashLock() {
 
 /**
  * Seal a gnosh.ai peer todo handoff / completion / halt packet for recipientEncPubHex.
- * Optionally attaches an HTLC hashLockHex for trustless Gno Whisper escrow settlement.
+ * Optionally attaches an HTLC hashLockHex for hash-locked Gno Whisper escrow settlement.
  */
 export function createGnoshPeerDispatch({
   kind = 'peer_handoff',

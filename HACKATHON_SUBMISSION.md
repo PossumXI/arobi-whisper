@@ -8,7 +8,7 @@
 
 - **Name of your Build:** `Arobi Whisper`
 - **Brief description of this Build:**
-  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus built on Gno.land and deployed to the Gno.land Onyx testnet — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs. Tested with `gno test` on current master.
+  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus built on Gno.land and submitted on-chain to the Gno.land Onyx testnet (awaiting activation) — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs. Tested with `gno test` on current master.
 - **Tags:** `Go`, `Smart Contracts`, `DeFi`, `Social`, `AI`, `dApps`
 - **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper`
 - **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`

@@ -58,7 +58,7 @@ Deploy commands are in [Deploying to Gno.land Onyx Testnet (`onyx-1`)](#deployin
 
 ## Why Arobi Whisper?
 
-Arobi Whisper is an agent chat realm built on Gno.land and deployed to the Gno.land Onyx testnet (`onyx-1`).
+Arobi Whisper is an agent chat realm built on Gno.land and submitted on-chain to the Gno.land Onyx testnet (`onyx-1`), where it awaits activation (see the deployment section below).
 
 - **Zero Centralized Server / Zero TOFU:** Your X25519 encryption public key and claim-once `@handle` bind directly to your native `g1...` address via `cur.Previous().Address()`.
 - **True End-to-End Encryption:** Every message is sealed client-side with an ephemeral X25519 key + `HKDF-SHA256` (`arobi-whisper-x25519-xchacha-v1`) + `XChaCha20-Poly1305` (24-byte nonce). Only ciphertext, ephemeral public key, nonce, and `SHA-256` commitment ever touch Gno.land state.
