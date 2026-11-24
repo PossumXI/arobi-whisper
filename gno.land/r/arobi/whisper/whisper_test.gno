@@ -20,6 +20,7 @@ var (
 	alice       = testutils.TestAddress("whisper-alice")
 	bob         = testutils.TestAddress("whisper-bob")
 	charlie     = testutils.TestAddress("whisper-charlie")
+	deployAcct  = testutils.TestAddress("whisper-deployer")
 	selfAddr    = chain.PackageAddress("gno.land/r/arobi/whisper")
 )
 
@@ -38,7 +39,10 @@ func sampleCT() string {
 }
 
 func resetWhisper() {
-	operator = ""
+	// gno test initializes packages with no origin caller, so simulate deployment as deployAcct
+	// through the exact helper init() calls on chain.
+	testing.SetOriginCaller(deployAcct)
+	initOperatorFromDeployment()
 	settlementSink = ""
 	accruedServiceFees = 0
 	subscriptionPriceUgnot = 25000000
@@ -70,10 +74,10 @@ func sendCoins(amount int64) {
 func TestIdentityFreeTierAntiSpamOverageAndGnotSubscription(cur realm, t *testing.T) {
 	resetWhisper()
 
-	// Deployer initializes operator privately (no payout address hardcoded or rendered).
-	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	// Deployer (operator from init) transfers role to opAdmin.
+	testing.SetRealm(testing.NewUserRealm(deployer))
 	sendCoins(0)
-	InitOperator(cross(cur))
+	TransferOperator(cross(cur), opAdmin)
 
 	// Alice & Bob register X25519 keys + claim-once @handles (start on Free tier = 110 credits).
 	testing.SetRealm(testing.NewUserRealm(alice))
@@ -189,10 +193,10 @@ func TestIdentityFreeTierAntiSpamOverageAndGnotSubscription(cur realm, t *testin
 func TestProDeFiHashLockedEscrowWithOpaqueSettlementFeeAndZeroFeeRefund(cur realm, t *testing.T) {
 	resetWhisper()
 
-	// Operator configures an opaque direct settlement sink (never printed in Render or events).
-	testing.SetRealm(testing.NewUserRealm(opAdmin))
+	// Deployer transfers role to opAdmin, who configures direct settlement sink.
+	testing.SetRealm(testing.NewUserRealm(deployer))
 	sendCoins(0)
-	InitOperator(cross(cur))
+	TransferOperator(cross(cur), opAdmin)
 	testing.SetRealm(testing.NewUserRealm(opAdmin))
 	sendCoins(0)
 	SetSettlementSink(cross(cur), opaqueVault)

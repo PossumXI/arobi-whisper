@@ -45,6 +45,8 @@ var reservedHandles = map[string]bool{
 	"official": true, "whisper": true, "aura": true, "arobiteam": true,
 	"moderator": true, "mod": true, "staff": true, "billing": true,
 	"payments": true, "noreply": true, "ullumii": true, "treasury": true,
+	"gaetano": true, "possumxi": true, "gno": true, "gnoland": true,
+	"jaekwon": true,
 }
 
 // ValidateKeyHex validates a 32-byte (64 lowercase hex char) X25519 or Ed25519 public key.
@@ -162,6 +164,7 @@ type EscrowRecord struct {
 	Sender        string
 	Recipient     string
 	AmountUgnot   int64
+	FeeBps        int64  // settlement fee locked at creation time (unaffected by later SetPricing)
 	HashLockHex   string // empty = open recipient claim; 64-hex = SHA-256(preimage) HTLC
 	ExpiryHeight  int64
 	Status        EscrowStatus
@@ -171,7 +174,7 @@ type EscrowRecord struct {
 
 // Encode serializes EscrowRecord state for RFC 6962 evidence anchoring.
 func (r EscrowRecord) Encode() []byte {
-	out := make([]byte, 0, 224)
+	out := make([]byte, 0, 232)
 	out = appendStr(out, DomainEscrow)
 	out = append(out, EncodingVersion)
 	out = binary.BigEndian.AppendUint64(out, r.ID)
@@ -179,6 +182,7 @@ func (r EscrowRecord) Encode() []byte {
 	out = appendStr(out, r.Sender)
 	out = appendStr(out, r.Recipient)
 	out = binary.BigEndian.AppendUint64(out, uint64(r.AmountUgnot))
+	out = binary.BigEndian.AppendUint64(out, uint64(r.FeeBps))
 	out = appendStr(out, r.HashLockHex)
 	out = binary.BigEndian.AppendUint64(out, uint64(r.ExpiryHeight))
 	out = appendStr(out, string(r.Status))

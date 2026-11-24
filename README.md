@@ -65,7 +65,7 @@ Arobi Whisper is an agent chat realm built on Gno.land and deployed to the Gno.l
 - **Tiered GNOT Subscriptions & Service Fees (mirroring live `aura-genesis.org/whisper`):**
   - **Free Tier:** `110` credits, `4 KiB` max ciphertext, standard E2EE messaging.
   - **Pro Subscription (`Subscribe` in GNOT — default `25 GNOT` / 30 days):** `2,500` credits per 30-day period, `16 KiB` encrypted envelopes, and DeFi HTLC escrow creation.
-  - **Pay-Per-Message Overage & Escrow Settlement Fees in GNOT:** Optional `0.01 GNOT` overage fee when credits reach `0`, plus a `1%` (`100 bps`) protocol settlement fee on claimed DeFi escrows (`0%` fee on expired refunds; `100%` of direct user tips forward straight to recipients). Operator settlement routing is configured privately at deployment time and never hardcoded or publicly disclosed.
+  - **Pay-Per-Message Overage & Escrow Settlement Fees in GNOT:** Optional `0.01 GNOT` overage fee when credits reach `0` (enforced on both `SendMessage` and `SendEscrowMessage`), plus a protocol settlement fee locked in `EscrowRecord.FeeBps` at creation time (default `1%` / `100 bps`, capped at `5%` / `500 bps`) on claimed DeFi escrows (`0%` fee on expired refunds; `100%` of direct user tips forward straight to recipients). The deploying account becomes `operator` atomically inside `init()` (no post-deploy claim race). `Render` and events do not print operator or settlement addresses; note that on a public chain, realm state, bank transfers, sender/recipient addresses, timestamps, and tip/escrow amounts are publicly inspectable metadata (E2EE protects message plaintext only).
 - **Built-In Arobi Assurance Evidence:** Directly imports `gno.land/p/arobi/assurance` so every delivered ciphertext envelope and DeFi escrow state transition is appended to an on-chain **RFC 6962 / RFC 9162 Merkle Accumulator** with independently verifiable inclusion proofs (`ProofForLeaf` / `VerifyLeafProof`).
 - **Cross-Shell / Cross-Environment / Cross-Harness Encrypted Agent Bus (`agentbus.gno` + `bridge/whisper-agent-bus.mjs`):** Whisper is a standalone E2EE DeFi messenger, and also ships a dedicated **Agent Bus utility** so autonomous agents running across different shells (`bash`, `pwsh`), environments (containers, WSL, cloud runners), and harnesses (**`Ullumii`**, **`gnosh.ai`**, realms) can exchange X25519 + ChaCha20-Poly1305 encrypted handoffs, delegated warrants, and RFC 6962 evidence digests directly over Whisper without sharing local pipes or centralized message brokers.
 
@@ -115,12 +115,12 @@ node bridge/whisper-mcp-server.mjs --print-gnosh-mcp
 ```
 
 `scripts/run-gno-tests.sh` is tested with `gno test` on current master (a parent `gnowork.toml` when this repo sits next to `immaculate-sdk-agent-builder`, otherwise a temporary workspace). Node tests cover the wallet adapter and the agent bus. Together they check:
-- Handle normalization & reserved-name protection (`@arobi`, `@ullumii`, duplicates)
-- X25519 key, 24-byte nonce, and canonical AEAD Base64 ciphertext validation
-- Free (`110` credits, `4 KiB`) vs Pro (`25 GNOT` / 30 days, `2,500` credits, `16 KiB`, DeFi escrows) metering, `0.01 GNOT` overage billing, and private opaque operator fee settlement (`InitOperator` / `SetSettlementSink` / `CollectServiceFees` with zero wallet address disclosure)
+- Handle normalization & reserved-name protection (`@arobi`, `@ullumii`, `@gaetano`, `@possumxi`, `@gno`, `@gnoland`, `@jaekwon`, duplicates)
+- X25519 key, 24-byte nonce, and canonical AEAD Base64 ciphertext validation (and preserving existing `SignPubHex` when omitted on update)
+- Free (`110` credits, `4 KiB`) vs Pro (`25 GNOT` / 30 days, `2,500` credits, `16 KiB`, DeFi escrows) metering, `0.01 GNOT` overage billing, atomic `init()` deployer-operator binding (`Operator` / `SetSettlementSink` / `TransferOperator` / `CollectServiceFees`), and direct-user-call guards on all payable entrypoints
 - Key rotation, allowlists, and `minTipUgnot` anti-spam enforcement
 - 100% direct tip forwarding to recipients
-- HTLC hash-locked encrypted DeFi escrow claim (`1%` protocol settlement fee in GNOT, `99%` to recipient), double-claim rejection, and `100%` (`0%` fee) sender refund after expiry
+- HTLC hash-locked encrypted DeFi escrow claim (fee locked in `EscrowRecord.FeeBps` at creation time, claims refused at or after `ExpiryHeight`), double-claim rejection, and `100%` (`0%` fee) sender refund after expiry
 - Cross-shell / cross-harness `AgentBusRoute` validation, cryptographic commitment binding, and end-to-end X25519 + ChaCha20-Poly1305 seal/open round-trip (`Ullumii` ↔ `gnosh.ai`)
 - On-chain RFC 6962 Merkle inclusion proof verification
 

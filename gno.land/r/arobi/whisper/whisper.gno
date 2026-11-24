@@ -7,10 +7,13 @@
 //
 // Zero plaintext or secret keys ever touch chain state. Clients seal messages locally
 // using X25519 + HKDF-SHA256 + XChaCha20-Poly1305 (exact Arobi Whisper v1 wire format).
+// Note: on a public chain, sender/recipient addresses, timestamps, tips, escrow amounts,
+// and realm state (including operator/settlement sink) are publicly observable metadata;
+// E2EE protects message plaintext only.
 //
-// Settlement privacy: service subscription and protocol fees are enforced on-chain in
-// GNOT, while operator settlement routing is configured privately at deployment time
-// and never hardcoded or publicly disclosed in source code, events, or gnoweb pages.
+// Settlement: subscription and protocol fees are enforced on-chain in GNOT. The deployer
+// becomes operator atomically inside init() during deployment (no post-deploy claim race).
+// No payout address is hardcoded, printed in Render, or emitted in events.
 package whisper
 
 import (
@@ -74,7 +77,9 @@ var (
 	overageFeeUgnot        int64 = 10000    // 0.01 GNOT pay-per-message when credits == 0
 	escrowFeeBps           int64 = 100      // 1.00% settlement fee on claimed DeFi escrows
 
-	// Private operator & opaque settlement vault (never printed in Render or emitted in events).
+	// Operator and settlement sink. Render and events do not print them; on a public chain
+	// realm state and bank transfers remain publicly inspectable. deployer is bound once in init().
+	deployer           address
 	operator           address
 	settlementSink     address
 	accruedServiceFees int64
@@ -92,19 +97,21 @@ var (
 	totalEscrowed int64
 )
 
-// ── Private Operator & Settlement Configuration ──────────────────────────────
+// ── Operator & Settlement Configuration ──────────────────────────────────────
 
-// InitOperator claims one-time deployer operator control after package deployment.
-func InitOperator(cur realm) {
-	prev := cur.Previous()
-	if !prev.IsUserCall() {
-		panic("init operator with a direct user call")
-	}
-	if operator != "" {
-		panic("operator already initialized")
-	}
-	operator = prev.Address()
+// init binds the deploying account as deployer and operator atomically inside the
+// deployment transaction itself, closing any post-deploy operator front-running window.
+func init() {
+	initOperatorFromDeployment()
 }
+
+func initOperatorFromDeployment() {
+	deployer = unsafe.OriginCaller()
+	operator = deployer
+}
+
+// Operator returns the current operator address.
+func Operator() address { return operator }
 
 // TransferOperator transfers operator control to a new address (operator only).
 func TransferOperator(cur realm, next address) {
@@ -212,7 +219,9 @@ func RegisterIdentity(cur realm, encPubHex, signPubHex, handle, displayName stri
 			}
 		}
 		id.EncPubHex = encPubHex
-		id.SignPubHex = signPubHex
+		if signPubHex != "" {
+			id.SignPubHex = signPubHex
+		}
 		if displayName != "" {
 			id.DisplayName = displayName
 		}
@@ -487,15 +496,21 @@ func SendEscrowMessage(
 	}
 
 	amount := sentUgnot()
-	if amount < MinEscrowUgnot {
-		panic("escrow requires at least " + strconv.FormatInt(MinEscrowUgnot, 10) + denom)
-	}
-	if amount < recipient.MinTipUgnot {
-		panic("escrow amount below recipient min tip")
-	}
-
+	escrowAmount := amount
 	if sender.Credits > 0 {
 		sender.Credits--
+	} else if overageFeeUgnot > 0 {
+		if amount < MinEscrowUgnot+overageFeeUgnot {
+			panic("out of credits: escrow send must cover overage fee (" + strconv.FormatInt(overageFeeUgnot, 10) + denom + ") plus min escrow")
+		}
+		settleServiceFee(cur, overageFeeUgnot)
+		escrowAmount = amount - overageFeeUgnot
+	}
+	if escrowAmount < MinEscrowUgnot {
+		panic("escrow requires at least " + strconv.FormatInt(MinEscrowUgnot, 10) + denom)
+	}
+	if escrowAmount < recipient.MinTipUgnot {
+		panic("escrow amount below recipient min tip")
 	}
 
 	msgID := uint64(len(messages)) + 1
@@ -525,7 +540,8 @@ func SendEscrowMessage(
 		MessageID:     msgID,
 		Sender:        sender.Address.String(),
 		Recipient:     recipient.Address.String(),
-		AmountUgnot:   amount,
+		AmountUgnot:   escrowAmount,
+		FeeBps:        escrowFeeBps, // locked at creation; later SetPricing never changes open escrows
 		HashLockHex:   hashLockHex,
 		ExpiryHeight:  height + ttlBlocks,
 		Status:        pw.EscrowOpen,
@@ -533,14 +549,15 @@ func SendEscrowMessage(
 	}
 	escLeafIdx := evidenceAcc.Append(esc.LeafHash())
 	escrows = append(escrows, esc)
-	totalEscrowed += amount
+	totalEscrowed += escrowAmount
 
 	chain.Emit("WhisperEscrowCreated",
 		"escrow_id", strconv.FormatUint(escID, 10),
 		"msg_id", strconv.FormatUint(msgID, 10),
 		"from", esc.Sender,
 		"to", esc.Recipient,
-		"amount_ugnot", strconv.FormatInt(amount, 10),
+		"amount_ugnot", strconv.FormatInt(escrowAmount, 10),
+		"fee_bps", strconv.FormatInt(esc.FeeBps, 10),
 		"hash_lock", hashLockHex,
 		"expiry_height", strconv.FormatInt(esc.ExpiryHeight, 10),
 		"leaf_index", strconv.FormatUint(escLeafIdx, 10),
@@ -549,8 +566,9 @@ func SendEscrowMessage(
 	return msgID, escID
 }
 
-// ClaimEscrow settles an open DeFi escrow to its recipient (verifying preimage if hash-locked).
-// Collects EscrowFeeBps (default 1%) service settlement fee in GNOT; remainder forwards to recipient.
+// ClaimEscrow settles an open DeFi escrow to its recipient (verifying preimage if hash-locked),
+// strictly before ExpiryHeight so HTLC timeout guarantees never race with RefundEscrow.
+// Collects the FeeBps locked when the escrow was created; remainder forwards to recipient.
 func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 	prev := cur.Previous()
 	if !prev.IsUserCall() {
@@ -559,6 +577,9 @@ func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 	esc := mustEscrow(escrowID)
 	if esc.Status != pw.EscrowOpen {
 		panic("escrow is already " + string(esc.Status))
+	}
+	if runtime.ChainHeight() >= esc.ExpiryHeight {
+		panic("escrow expired at height " + strconv.FormatInt(esc.ExpiryHeight, 10) + "; only the sender may refund it")
 	}
 	caller := prev.Address()
 	if caller.String() != esc.Recipient {
@@ -570,7 +591,7 @@ func ClaimEscrow(cur realm, escrowID uint64, preimage string) int64 {
 		}
 	}
 
-	fee := (esc.AmountUgnot * escrowFeeBps) / 10000
+	fee := (esc.AmountUgnot * esc.FeeBps) / 10000
 	if fee >= esc.AmountUgnot {
 		fee = 0
 	}
