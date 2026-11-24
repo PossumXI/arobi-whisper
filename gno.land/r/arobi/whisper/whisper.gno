@@ -99,7 +99,7 @@ var (
 	escrowCount  uint64
 
 	// Append-only RFC 6962 accumulator over every message envelope & escrow transition.
-	evidenceAcc   assurance.Accumulator
+	evidenceAcc   assurance.LedgerAccumulator // grows with every message across transactions: leaves in a tree
 	totalTips     int64
 	totalEscrowed int64
 )

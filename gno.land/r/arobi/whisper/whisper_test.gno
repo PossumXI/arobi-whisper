@@ -56,7 +56,7 @@ func resetWhisper() {
 	messageCount = 0
 	escrows = avl.NewTree()
 	escrowCount = 0
-	evidenceAcc = assurance.Accumulator{}
+	evidenceAcc = assurance.LedgerAccumulator{}
 	totalTips = 0
 	totalEscrowed = 0
 }
