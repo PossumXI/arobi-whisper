@@ -34,7 +34,7 @@ Rules for the DoraHacks hackathon: [Gnome Tavern](https://dorahacks.io/hackathon
 - `gno.land/...` paths
 - `.gno` files
 - `gno`, `gnokey`, and `gnodev` commands
-- Protocol strings `arobi-whisper-gno-envelope-v1` and `arobi-whisper-gno-escrow-v1`
+- Protocol strings `arobi-whisper-gno-envelope-v1` and `arobi-whisper-gno-escrow-v2` (see PROTOCOL.md)
 - The Onyx proof table and its transaction hashes
 - Release tag `v1.0.0-gnome-tavern`
 - Hugging Face slugs, including `immaculate-agent-gno-benchmarks`
