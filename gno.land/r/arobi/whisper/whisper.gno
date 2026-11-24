@@ -65,8 +65,10 @@ type Identity struct {
 	MinTipUgnot      int64
 	AllowListOnly    bool
 	Allowed          *avl.Tree // senderAddr -> bool
-	InboxIDs         []uint64
-	SentIDs          []uint64
+	Inbox            *avl.Tree // seqKey(n) -> message id, the n-th message received
+	InboxCount       uint64
+	Sent             *avl.Tree // seqKey(n) -> message id, the n-th message sent
+	SentCount        uint64
 	CreatedHeight    int64
 	UpdatedHeight    int64
 }
@@ -84,12 +86,17 @@ var (
 	settlementSink     address
 	accruedServiceFees int64
 
+	// Storage whose gas per send stays flat as history grows: trees and counters, never a slice
+	// appended to on every call (a slice's backing array is loaded and saved in full each time).
 	identities    = avl.NewTree() // addr.String() -> *Identity
 	handles       = avl.NewTree() // handle -> addr.String()
-	identityOrder []string
+	identityCount uint64          // identities ever registered
+	identitySeq   = avl.NewTree() // seqKey(n) -> addr.String(), in registration order
 
-	messages []*pw.SealedEnvelope
-	escrows  []*pw.EscrowRecord
+	messages     = avl.NewTree() // seqKey(id) -> *pw.SealedEnvelope
+	messageCount uint64
+	escrows      = avl.NewTree() // seqKey(id) -> *pw.EscrowRecord
+	escrowCount  uint64
 
 	// Append-only RFC 6962 accumulator over every message envelope & escrow transition.
 	evidenceAcc   assurance.Accumulator
@@ -246,11 +253,14 @@ func RegisterIdentity(cur realm, encPubHex, signPubHex, handle, displayName stri
 		Tier:          TierFree,
 		Credits:       FreePeriodCredits,
 		Allowed:       avl.NewTree(),
+		Inbox:         avl.NewTree(),
+		Sent:          avl.NewTree(),
 		CreatedHeight: height,
 		UpdatedHeight: height,
 	}
 	identities.Set(key, id)
-	identityOrder = append(identityOrder, key)
+	identityCount++
+	identitySeq.Set(seqKey(identityCount), key)
 
 	chain.Emit("WhisperIdentityRegistered",
 		"addr", key,
@@ -411,7 +421,7 @@ func SendMessage(
 			"; got " + strconv.FormatInt(tip, 10) + denom + " after service fee")
 	}
 
-	msgID := uint64(len(messages)) + 1
+	msgID := messageCount + 1
 	env := &pw.SealedEnvelope{
 		ID:              msgID,
 		ChainID:         runtime.ChainID(),
@@ -428,9 +438,7 @@ func SendMessage(
 	}
 	leaf := env.LeafHash()
 	env.LeafIndex = evidenceAcc.Append(leaf)
-	messages = append(messages, env)
-	recipient.InboxIDs = append(recipient.InboxIDs, msgID)
-	sender.SentIDs = append(sender.SentIDs, msgID)
+	recordMessage(env, sender, recipient)
 
 	if serviceFee > 0 {
 		settleServiceFee(cur, serviceFee)
@@ -513,8 +521,8 @@ func SendEscrowMessage(
 		panic("escrow amount below recipient min tip")
 	}
 
-	msgID := uint64(len(messages)) + 1
-	escID := uint64(len(escrows)) + 1
+	msgID := messageCount + 1
+	escID := escrowCount + 1
 
 	env := &pw.SealedEnvelope{
 		ID:              msgID,
@@ -531,9 +539,7 @@ func SendEscrowMessage(
 		Height:          height,
 	}
 	env.LeafIndex = evidenceAcc.Append(env.LeafHash())
-	messages = append(messages, env)
-	recipient.InboxIDs = append(recipient.InboxIDs, msgID)
-	sender.SentIDs = append(sender.SentIDs, msgID)
+	recordMessage(env, sender, recipient)
 
 	esc := &pw.EscrowRecord{
 		ID:            escID,
@@ -548,7 +554,8 @@ func SendEscrowMessage(
 		CreatedHeight: height,
 	}
 	escLeafIdx := evidenceAcc.Append(esc.LeafHash())
-	escrows = append(escrows, esc)
+	escrows.Set(seqKey(escID), esc)
+	escrowCount = escID
 	totalEscrowed += escrowAmount
 
 	chain.Emit("WhisperEscrowCreated",
@@ -667,14 +674,14 @@ func ResolveRecipient(addrOrHandle string) string {
 
 func Root() string            { return assurance.Hex(evidenceAcc.Root()) }
 func AccumulatorSize() uint64 { return evidenceAcc.Size() }
-func MessageCount() uint64    { return uint64(len(messages)) }
-func EscrowCount() uint64     { return uint64(len(escrows)) }
+func MessageCount() uint64    { return messageCount }
+func EscrowCount() uint64     { return escrowCount }
 
 func MessageLeafHex(msgID uint64) string {
-	if msgID == 0 || msgID > uint64(len(messages)) {
+	if msgID == 0 || msgID > messageCount {
 		panic("no message " + strconv.FormatUint(msgID, 10))
 	}
-	return assurance.Hex(messages[msgID-1].LeafHash())
+	return assurance.Hex(messages.Get(seqKey(msgID)).(*pw.SealedEnvelope).LeafHash())
 }
 
 func ProofForLeaf(leafIndex, treeSize uint64) string {
@@ -769,10 +776,26 @@ func mustResolveIdentity(addrOrHandle string) *Identity {
 }
 
 func mustEscrow(id uint64) *pw.EscrowRecord {
-	if id == 0 || id > uint64(len(escrows)) {
+	if id == 0 || id > escrowCount {
 		panic("escrow not found: " + strconv.FormatUint(id, 10))
 	}
-	return escrows[id-1]
+	return escrows.Get(seqKey(id)).(*pw.EscrowRecord)
+}
+
+// recordMessage stores a sent envelope under its id and in the sender's and recipient's own lists.
+func recordMessage(env *pw.SealedEnvelope, sender, recipient *Identity) {
+	messages.Set(seqKey(env.ID), env)
+	messageCount = env.ID
+	recipient.InboxCount++
+	recipient.Inbox.Set(seqKey(recipient.InboxCount), env.ID)
+	sender.SentCount++
+	sender.Sent.Set(seqKey(sender.SentCount), env.ID)
+}
+
+// seqKey is a sequence number in fixed-width decimal, so a tree's key order is sequence order.
+func seqKey(n uint64) string {
+	s := strconv.FormatUint(n, 10)
+	return strings.Repeat("0", 20-len(s)) + s
 }
 
 func checkCanSend(sender, recipient *Identity) {

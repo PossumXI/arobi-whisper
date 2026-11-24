@@ -50,9 +50,12 @@ func resetWhisper() {
 	escrowFeeBps = 100
 	identities = avl.NewTree()
 	handles = avl.NewTree()
-	identityOrder = nil
-	messages = nil
-	escrows = nil
+	identityCount = 0
+	identitySeq = avl.NewTree()
+	messages = avl.NewTree()
+	messageCount = 0
+	escrows = avl.NewTree()
+	escrowCount = 0
 	evidenceAcc = assurance.Accumulator{}
 	totalTips = 0
 	totalEscrowed = 0
