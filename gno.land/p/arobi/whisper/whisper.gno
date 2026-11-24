@@ -24,7 +24,8 @@ import (
 const (
 	EncodingVersion uint8 = 1
 	DomainEnvelope        = "arobi-whisper-gno-envelope-v1"
-	DomainEscrow          = "arobi-whisper-gno-escrow-v1"
+	// v2 (2026-11-24): the escrow record encodes FeeBps, the fee fixed when it opens (PROTOCOL.md).
+	DomainEscrow          = "arobi-whisper-gno-escrow-v2"
 
 	// MaxCiphertextB64Len bounds on-chain encrypted payload size (16 KiB base64 ~ 12 KiB ciphertext).
 	MaxCiphertextB64Len = 16384
