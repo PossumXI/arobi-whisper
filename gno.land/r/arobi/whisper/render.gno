@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"gno.land/p/arobi/assurance"
+	pw "gno.land/p/arobi/whisper"
 )
 
 // Render serves the gnoweb explorer for Arobi Whisper.
@@ -42,23 +43,30 @@ func renderHome() string {
 	b.WriteString("| Free Tier | `" + strconv.FormatInt(FreePeriodCredits, 10) + "` credits, `4 KiB` max ciphertext |\n")
 	b.WriteString("| Pro Subscription (30 days) | `" + strconv.FormatInt(subscriptionPriceUgnot, 10) + "ugnot` (`" + strconv.FormatInt(ProPeriodCredits, 10) + "` credits, `16 KiB` ciphertext, DeFi HTLC escrows) |\n")
 	b.WriteString("| Overage / Escrow Settlement Fee | `" + strconv.FormatInt(overageFeeUgnot, 10) + "ugnot` per overage msg · `" + strconv.FormatInt(escrowFeeBps, 10) + " bps` on claimed escrows |\n")
-	b.WriteString("| Registered Identities | " + strconv.Itoa(len(identityOrder)) + " |\n")
-	b.WriteString("| Encrypted Messages | " + strconv.Itoa(len(messages)) + " |\n")
-	b.WriteString("| DeFi Escrows Created | " + strconv.Itoa(len(escrows)) + " |\n")
+	b.WriteString("| Registered Identities | " + strconv.FormatUint(identityCount, 10) + " |\n")
+	b.WriteString("| Encrypted Messages | " + strconv.FormatUint(messageCount, 10) + " |\n")
+	b.WriteString("| DeFi Escrows Created | " + strconv.FormatUint(escrowCount, 10) + " |\n")
 	b.WriteString("| Total Direct Tips | `" + strconv.FormatInt(totalTips, 10) + "ugnot` |\n")
 	b.WriteString("| Total Escrowed Volume | `" + strconv.FormatInt(totalEscrowed, 10) + "ugnot` |\n")
 	b.WriteString("| Evidence Accumulator Leaves | " + strconv.FormatUint(evidenceAcc.Size(), 10) + " |\n")
 	b.WriteString("| Global RFC 6962 Root | `" + assurance.Hex(evidenceAcc.Root()) + "` |\n\n")
 
 	b.WriteString("## Public X25519 Key Directory\n\n")
-	if len(identityOrder) == 0 {
+	if identityCount == 0 {
 		b.WriteString("_No identities registered yet. Call `RegisterIdentity` to publish your X25519 public key._\n")
 		return b.String()
 	}
 
 	b.WriteString("| Handle | Address | Min Tip | Allowlist | Inbox | Keycard |\n")
 	b.WriteString("| --- | --- | ---: | --- | ---: | --- |\n")
-	for _, addr := range identityOrder {
+	// The latest 20, newest first: a page stays the same size however many identities exist. Every
+	// identity also has its own keycard page at :u/<handle or address>.
+	var latest []string
+	identitySeq.ReverseIterate("", "", func(_ string, v any) bool {
+		latest = append(latest, v.(string))
+		return len(latest) >= 20
+	})
+	for _, addr := range latest {
 		id, ok := identities.Get(addr).(*Identity)
 		if !ok || id == nil {
 			continue
@@ -72,7 +80,7 @@ func renderHome() string {
 		b.WriteString("| " + hLabel + " | `" + id.Address.String() + "` | `" +
 			strconv.FormatInt(id.MinTipUgnot, 10) + "ugnot` | `" +
 			strconv.FormatBool(id.AllowListOnly) + "` | " +
-			"[View (" + strconv.Itoa(len(id.InboxIDs)) + ")](/r/arobi/whisper:inbox/" + linkKey + ") | " +
+			"[View (" + strconv.FormatUint(id.InboxCount, 10) + ")](/r/arobi/whisper:inbox/" + linkKey + ") | " +
 			"[Keycard](/r/arobi/whisper:u/" + linkKey + ") |\n")
 	}
 	return b.String()
@@ -98,7 +106,7 @@ func renderUser(q string) string {
 	}
 	b.WriteString("- **Minimum Anti-Spam Tip:** `" + strconv.FormatInt(id.MinTipUgnot, 10) + "ugnot`\n")
 	b.WriteString("- **Allowlist Only:** `" + strconv.FormatBool(id.AllowListOnly) + "`\n")
-	b.WriteString("- **Messages Received:** `" + strconv.Itoa(len(id.InboxIDs)) + "` | **Sent:** `" + strconv.Itoa(len(id.SentIDs)) + "`\n\n")
+	b.WriteString("- **Messages Received:** `" + strconv.FormatUint(id.InboxCount, 10) + "` | **Sent:** `" + strconv.FormatUint(id.SentCount, 10) + "`\n\n")
 	linkKey := id.Address.String()
 	if id.Handle != "" {
 		linkKey = id.Handle
@@ -115,16 +123,17 @@ func renderInbox(q string) string {
 	var b strings.Builder
 	b.WriteString("# Encrypted Inbox: `" + id.Address.String() + "`\n\n")
 	b.WriteString("_All payloads below are client-sealed `XChaCha20-Poly1305` ciphertexts. Only the holder of the matching local X25519 secret key can decrypt them._\n\n")
-	if len(id.InboxIDs) == 0 {
+	if id.InboxCount == 0 {
 		b.WriteString("_Inbox is empty._\n\n[Back](/r/arobi/whisper)")
 		return b.String()
 	}
-	start := 0
-	if len(id.InboxIDs) > 20 {
-		start = len(id.InboxIDs) - 20
-	}
-	for i := len(id.InboxIDs) - 1; i >= start; i-- {
-		env := messages[id.InboxIDs[i]-1]
+	var recent []uint64
+	id.Inbox.ReverseIterate("", "", func(_ string, v any) bool {
+		recent = append(recent, v.(uint64))
+		return len(recent) >= 20
+	})
+	for _, msgID := range recent {
+		env := messages.Get(seqKey(msgID)).(*pw.SealedEnvelope)
 		b.WriteString("- **Msg #" + strconv.FormatUint(env.ID, 10) + "** from `" + env.From +
 			"` at height `" + strconv.FormatInt(env.Height, 10) + "` | commitment `" +
 			env.CommitmentHex[:16] + "...` | tip `" + strconv.FormatInt(env.TipUgnot, 10) + "ugnot`")
@@ -140,10 +149,10 @@ func renderInbox(q string) string {
 
 func renderEscrow(idStr string) string {
 	id, err := strconv.ParseUint(idStr, 10, 64)
-	if err != nil || id == 0 || id > uint64(len(escrows)) {
+	if err != nil || id == 0 || id > escrowCount {
 		return "# Escrow Not Found\n\nInvalid escrow id `" + idStr + "`.\n\n[Back](/r/arobi/whisper)"
 	}
-	e := escrows[id-1]
+	e := escrows.Get(seqKey(id)).(*pw.EscrowRecord)
 	var b strings.Builder
 	b.WriteString("# Whisper DeFi Escrow #" + idStr + "\n\n")
 	b.WriteString("- **Status:** `" + string(e.Status) + "`\n")
