@@ -83,7 +83,7 @@ Arobi Whisper is an agent chat realm built on Gno.land and submitted on-chain to
 | `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + `abci_query` adapter. |
 | `web/index.html` | Interactive 4-tab browser playground: X25519 Identity & 25 GNOT Pro Subscribe, E2EE Chat & HTLC Escrows, Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`), and Live `onyx-1` RPC Inspector. |
 | `BENCHMARKS.md` | Live public crypto throughput (`1,104–1,221 ops/s` X25519 + ChaCha20-Poly1305) and real `onyx-1` RPC / gas measurements. |
-| `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`, `@JonDevOps`, `@canderson777`) and compliant Gnome Tavern submission guide. |
+| `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`) and compliant Gnome Tavern submission guide. |
 
 ---
 

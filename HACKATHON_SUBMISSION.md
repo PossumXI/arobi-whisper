@@ -47,7 +47,7 @@
 
 ---
 
-## 2–3 Minute Demo Video Shot List (for `@canderson777`)
+## 2–3 Minute Demo Video Shot List
 1. **0:00–0:30 (Overview):** Zero-server E2EE DeFi chat + Familiar Agent Bus (plaintext never touches chain state).
 2. **0:30–1:15 (Interactive Web Playground `web/index.html`):** Generate X25519 keypair in browser, build `RegisterIdentity` + **Pro Subscribe (`25 GNOT`)**, seal an encrypted HTLC escrow message (`SendEscrowMessage` + `ClaimEscrow` + `RefundEscrow`), and show zero plaintext in the `/vm.m_call` payload.
 3. **1:15–2:00 (Cross-Harness Encrypted Agent Bus):** Seal an `Ullumii → gnosh.ai` `capability_lease` / `handoff` packet via `bridge/whisper-agent-bus.mjs` and show tamper rejection + real measured throughput (`1,104–1,221 ops/s` in `BENCHMARKS.md`).
