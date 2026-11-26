@@ -82,8 +82,8 @@ Arobi Whisper is an agent chat realm built on Gno.land and submitted on-chain to
 | `bridge/whisper-mcp-server.mjs` | Zero-dependency JSON-RPC 2.0 MCP stdio server (`whisper_keygen`, `whisper_create_hashlock`, `whisper_seal_peer_handoff`, `whisper_open_peer_handoff`, `whisper_build_relay_tx`) + `--print-gnosh-mcp` one-liner for `gnosh.ai`, `Ullumii`, and `HUE`. |
 | `web/adena-whisper.mjs` | Adena Wallet (`window.adena.DoContract`) transaction builders (`RegisterIdentity`, `Subscribe`, `SetInboxPolicy`, `SendMessage`, `SendEscrowMessage`, `ClaimEscrow`, `RefundEscrow`) + `abci_query` adapter. |
 | `web/index.html` | Interactive 4-tab browser playground: X25519 Identity & 25 GNOT Pro Subscribe, E2EE Chat & HTLC Escrows, Cross-Harness Agent Bus (`Ullumii` ↔ `gnosh.ai`), and Live `onyx-1` RPC Inspector. |
-| `BENCHMARKS.md` | Live public crypto throughput (`1,104–1,221 ops/s` X25519 + ChaCha20-Poly1305) and real `onyx-1` RPC / gas measurements. |
-| `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`) and compliant Gnome Tavern submission guide. |
+| `BENCHMARKS.md` / `WALKTHROUGH.md` | Live crypto throughput (`1,104–1,221 ops/s`), `7.1×` flat-gas AVL storage (`308.3M → 43.1M` gas at `1,000` messages), `onyx-1` status, and 3/6-month Gnome Tavern roadmap. |
+| `CONTRIBUTORS.md` / `HACKATHON_SUBMISSION.md` | Team roles (`@iShowLinux`, `@ShadowPlague21`, `@canderson777`) and compliant Gnome Tavern submission guide. |
 
 ---
 
