@@ -142,11 +142,23 @@ Full live measurements against `onyx-1` RPC and `bridge/whisper-agent-bus.mjs` a
 
 ---
 
-## Live Gno.land Onyx Testnet (`onyx-1`) Submission Proof
+## Live on the Gno.land Onyx testnet (`onyx-1`)
 
-Submitted on-chain to `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`; currently parked in Onyx's `code_submission_policy = "inert"` approver activation queue — verifiable via `gnokey query vm/qinertpaths`).
+The current code (this repository at `78234ca`) is live on `onyx-1` (`https://rpc.onyx.testnets.gno.land:443`) under the
+project's deployer namespace `g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak`, deployed and enabled on 2026-11-27 (17:33 UTC):
 
-The live Onyx package and realm paths used a deployer-address namespace (`gno.land/p/<namespace>/whisper` and `gno.land/r/<namespace>/whisper`). Those on-chain paths, transaction hashes, and deploy block heights are omitted from this public README because they identify the deployer account. To review and run the code, use the in-repo paths `gno.land/p/arobi/whisper` and `gno.land/r/arobi/whisper`.
+| Path | Kind | Deployed at height | Open |
+| --- | --- | --- | --- |
+| `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` | package | 1,455,967 | [gnoweb](https://onyx.testnets.gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2) |
+| `gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` | realm | 1,455,968 | [gnoweb](https://onyx.testnets.gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2) |
+
+- **The first submission.** The 2026-11-23 code stays live under the earlier namespace `g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t`
+  (`gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` at height 1,343,650, `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` at 1,343,652). A Gno path is
+  immutable once submitted, so the current code is the `/v2` set above.
+- **Operator.** `r/whisper/v2`'s operator is the deployer, set in `init()`. The first submission's realm had no operator
+  set, so the same deployer claimed it on 2026-11-27, and nobody else can take its fee sink or pricing.
+- **Check it yourself.** `gnokey query vm/qfile -data gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2 -remote https://rpc.onyx.testnets.gno.land:443`
+  lists the realm's files. The gnoweb links above render it.
 
 *(Also supports cross-harness Familiar `capability_lease`, `memory_sync`, and `gnosh.ai` `gnomem/v2` peer-plan relay envelopes carrying `CapabilityDigestHex` and `MemoryRecallDigestHex` in `gno.land/p/arobi/whisper/agentbus.gno`.)*
 

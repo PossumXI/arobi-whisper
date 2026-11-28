@@ -8,7 +8,7 @@
 
 - **Name of your Build:** `Arobi Whisper`
 - **Brief description of this Build:**
-  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus built on Gno.land and submitted on-chain to the Gno.land Onyx testnet (awaiting activation) — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs. Tested with `gno test` on current master.
+  > End-to-end encrypted DeFi messenger and cross-shell / cross-harness Familiar Agent Bus built on Gno.land and live on the Gno.land Onyx testnet — client-sealed `X25519 + XChaCha20-Poly1305` chat, Free/Pro GNOT subscriptions, direct GNOT tips, HTLC DeFi escrows, and RFC 6962 cryptographic delivery proofs. Tested with `gno test` on current master.
 - **Tags:** `Go`, `Smart Contracts`, `DeFi`, `Social`, `AI`, `dApps`
 - **GitHub Repo:** `https://github.com/PossumXI/arobi-whisper`
 - **Demo Video (1080p MP4, 2m 11s):** `https://github.com/PossumXI/arobi-whisper/releases/download/v1.0.0-gnome-tavern/Arobi_Whisper_Demo_1080p.mp4`
@@ -21,18 +21,21 @@
 ## Copy-Paste DoraHacks `Submit Build` Modal Fields
 
 - **Gno.land testnet deployment link (`gnoweb` URL):**
-  `https://onyx.testnets.gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`
-  *(Submitted on-chain to `onyx-1` at blocks `1343650` / `1343652`; verifiable right now via `gnokey query vm/qinertpaths` while awaiting Onyx `enablepkg` approver activation.)*
+  `https://onyx.testnets.gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2`
+  *(Live on `onyx-1` since 2026-11-27 17:33 UTC, from `78234ca`. The first submission also stays live:
+  `https://onyx.testnets.gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`.)*
 - **Realm or package path:**
-  `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`
-  *(Pure package: `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper`, importing `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/assurance`)*
+  `gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2`
+  *(Pure package: `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2`, importing `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/assurance/v2`.)*
 - **Is this a new project, or one started before Gnome Tavern?**
   > Arobi Whisper exists as a live web E2EE messenger (`aura-genesis.org/whisper`). During Gnome Tavern, we built a brand-new smart-contract architecture (`p/arobi/whisper` + `r/arobi/whisper`) from scratch with on-chain X25519 keycards, claim-once `@handles`, GNOT Free/Pro subscription metering (`25 GNOT`/30d), HTLC DeFi escrows (`1%` claim fee / `0%` expired refund), RFC 6962 inclusion proofs, a **Cross-Shell / Cross-Harness Encrypted Agent Bus** (`agentbus.gno` + `bridge/whisper-agent-bus.mjs` connecting `Ullumii`, `gnosh.ai`, and local shells), and an Adena Wallet browser playground (`web/index.html`).
-- **On-Chain Onyx (`onyx-1`) Proof Table (for `#gnome-tavern-hackathon` `enablepkg` activation):**
-  | Package / Realm | Block | Gas Used | Tx Hash |
-  | --- | ---: | ---: | --- |
-  | `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343650` | `17,978,068` | `Y8yxq2g2dcj2q3PUrJDzHEk6TeyEq2mEDfXvn6yW0ow=` |
-  | `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` | `1343652` | `45,410,622` | `/EB7ITw57NRhnrB9rIS5gi6hp73k9yRcHKwH6LWwOcc=` |
+- **On-chain proof on `onyx-1` (all live):**
+  | Path | Kind | Deployed at height | Open |
+  | --- | --- | --- | --- |
+  | `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` | package | 1,455,967 | [gnoweb](https://onyx.testnets.gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2) |
+  | `gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` | realm | 1,455,968 | [gnoweb](https://onyx.testnets.gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2) |
+  | `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (first submission) | package | 1,343,650 | [gnoweb](https://onyx.testnets.gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper) |
+  | `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (first submission) | realm | 1,343,652 | [gnoweb](https://onyx.testnets.gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper) |
 
 ---
 
