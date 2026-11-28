@@ -25,12 +25,17 @@ node bridge/whisper-mcp-server.mjs --print-gnosh-mcp
 
 ## 2. Live Gno.land Onyx (`onyx-1`) Deployment Status
 
-- **Upstream dependency `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/signals`:** **`ACTIVE` on `onyx-1`** (queryable via `gnokey query vm/qfile`).
-- **`gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (block `1,343,650`) & `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (block `1,343,652`):** Confirmed on-chain in `vm/qinertpaths` (`gnokey query vm/qinertpaths -remote https://rpc.onyx.testnets.gno.land:443`), awaiting Onyx approver `enablepkg` activation alongside `p/.../assurance`.
+Checked 2026-11-28 00:30 UTC: every path below is live.
+- **Current code (`/v2`, from `78234ca`):** `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` (height 1,455,967) and
+  `gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2` (height 1,455,968), with its imports `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/assurance/v2` and
+  `gno.land/p/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/signals/v2`. Open https://onyx.testnets.gno.land/r/g1jkstuy23a8e44jvdjajc5gjjry9vwevmkvmdak/whisper/v2.
+- **First submission (the 2026-11-23 code):** `gno.land/p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (height 1,343,650) and
+  `gno.land/r/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/whisper` (height 1,343,652), with `p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/signals` and `p/g1jdc6h96he7wf7xfycu6u7wqhv5j762qtxu5k5t/assurance`. A Gno path is immutable
+  once submitted, so later code goes to `/v2`.
 
 ---
 
 ## 3. 3-Month & 6-Month Gnome Tavern Roadmap
 
-- **Month 1–3:** Activate `/v2` flat-gas Whisper realms on `onyx-1`, add multi-recipient group key-ratchet channels for DAO/team rooms, and ship live Adena one-click HTLC bounty settlement templates.
+- **Month 1–3:** (`/v2` flat-gas Whisper realms: live on `onyx-1` since 2026-11-27.) Add multi-recipient group key-ratchet channels for DAO/team rooms, and ship live Adena one-click HTLC bounty settlement templates.
 - **Month 3–6:** Deploy `r/arobi/whisper` to Gno.land mainnet, integrate threshold arbiter resolution for disputed DeFi escrows, and bridge cross-harness `gnosh.ai` ↔ `Ullumii` peer plans over on-chain Whisper mailboxes.
